@@ -4,3 +4,4 @@ __pycache__/
 .env
 .sync/
 dist/
+.DS_Store
