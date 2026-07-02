@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gdoc-sync"
+version = "0.1.0"
+description = "Sync local markdown files with Google Docs: push drafts, pull comments and edits, preserve comment anchors."
+requires-python = ">=3.10"
+dependencies = [
+    "google-api-python-client>=2.100",
+    "google-auth-oauthlib>=1.0",
+    "markdown-it-py>=3.0",
+    "python-frontmatter>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "python-dotenv>=1.0"]
+
+[project.scripts]
+gdoc-sync = "gdoc_sync.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
