@@ -124,5 +124,57 @@ def block_requests(block, index):
     return reqs
 
 
+def parse_table(source):
+    rows = []
+    for i, line in enumerate(source.split("\n")):
+        if i == 1:
+            continue                              # separator row
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        rows.append(cells)
+    return rows
+
+
+def _cell_index(index, r, c, cols):
+    # Empty-table layout: +1 table element, then per row +1, per cell +2
+    # (cell start + empty paragraph). First cell paragraph sits at index+4.
+    # AUTHORITY: the e2e round-trip test (tests/e2e) validates this against
+    # the live API. If e2e disagrees, fix this function, not e2e.
+    return index + 4 + r * (2 * cols + 1) + 2 * c
+
+
 def table_requests(block, index):
-    raise NotImplementedError  # Task 8
+    rows = parse_table(block.source)
+    n_rows, n_cols = len(rows), len(rows[0])
+    reqs = [{"insertTable": {"location": {"index": index}, "rows": n_rows, "columns": n_cols}}]
+    for r in range(n_rows - 1, -1, -1):           # reverse: highest index first
+        for c in range(n_cols - 1, -1, -1):
+            cell_md = rows[r][c]
+            if not cell_md:
+                continue
+            runs = inline_runs(cell_md)
+            text = "".join(x.text for x in runs)
+            at = _cell_index(index, r, c, n_cols)
+            reqs.append({"insertText": {"location": {"index": at}, "text": text}})
+            offset = at
+            for x in runs:
+                end = offset + len(x.text)
+                style, fields = {}, []
+                if x.bold:
+                    style["bold"] = True
+                    fields.append("bold")
+                if x.italic:
+                    style["italic"] = True
+                    fields.append("italic")
+                if x.link:
+                    style["link"] = {"url": x.link}
+                    fields.append("link")
+                if fields:
+                    reqs.append({
+                        "updateTextStyle": {
+                            "range": {"startIndex": offset, "endIndex": end},
+                            "textStyle": style,
+                            "fields": ",".join(fields),
+                        }
+                    })
+                offset = end
+    return reqs
