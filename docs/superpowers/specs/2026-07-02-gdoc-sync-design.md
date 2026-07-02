@@ -28,9 +28,10 @@ loses time and fidelity in both directions.
 - Handling Google Docs suggestion-mode edits as structured data. Suggestions
   that teammates accept become direct edits and flow through the normal pull.
 - Real-time sync. This is an explicit push/pull tool for review rounds.
-- Images, tables, and footnotes round-tripping perfectly. v1 targets prose:
-  headings, paragraphs, bold/italic, links, lists, block quotes. Anything else
-  should survive push (via the fallback path) but may not diff cleanly.
+- Images and footnotes round-tripping perfectly. v1 targets prose plus tables:
+  headings, paragraphs, bold/italic, links, lists, block quotes, and tables.
+  Anything else should survive push (via the fallback path) but may not diff
+  cleanly.
 
 ## Architecture
 
@@ -63,8 +64,13 @@ Drive comments read access.
   Drive API with conversion (`text/markdown` → Google Doc). Write `gdoc_id`
   and `gdoc_url` to frontmatter, save the snapshot, print the shareable URL.
 - **Revision push (`gdoc_id` present):** preserve comment anchors:
-  1. Diff current markdown against the snapshot at paragraph granularity
-     (a paragraph = markdown block: heading, paragraph, list item, quote).
+  1. Diff current markdown against the snapshot at block granularity
+     (a block = heading, paragraph, list item, quote, or whole table).
+     Tables are atomic: any cell change marks the whole table as changed,
+     and a changed table is replaced wholesale (`deleteContentRange`, then
+     `insertTable` + cell-population requests). Comments anchored inside a
+     replaced table orphan — the anchor-orphaning warning (step 4) covers
+     them like any other changed block. Comments elsewhere are unaffected.
   2. Read the live doc structure via `documents.get` to map paragraphs to
      index ranges. Verify unchanged paragraphs still match the doc text; if
      the doc has diverged from the snapshot (teammate edits not yet pulled),
@@ -124,20 +130,41 @@ so teammates see a normal shared doc).
   rejected batch applies nothing and the snapshot is not updated. If partial
   application is ever detected (doc revision advanced despite an error),
   instruct the user to `pull` and inspect.
-- Markdown constructs the differ can't map (tables, images, footnotes):
-  detected up front; the tool names the offending blocks and offers
-  `--replace`.
+- Markdown constructs the differ can't map (images, footnotes): detected up
+  front; the tool names the offending blocks and offers `--replace`.
 
 ## Testing
 
 - Unit tests (pytest, no network): the unescape pass (fixture pairs of
-  Google-exported markdown → clean markdown), paragraph diffing (base/new →
-  expected block operations), markdown block → `batchUpdate` request
-  generation, frontmatter read/write.
-- Integration smoke test (manual, documented in the repo README): push a
-  fixture doc, comment on it by hand, edit a paragraph, `pull`, verify
-  comments file and remote diff; revise an untouched-comment paragraph's
-  sibling, `push`, verify the comment anchor survived in the Docs UI.
+  Google-exported markdown → clean markdown), block diffing including tables
+  (base/new → expected block operations), markdown block → `batchUpdate`
+  request generation (including `insertTable` + cell population), frontmatter
+  read/write.
+- **Opt-in e2e tests** (pytest, real API), following the python-substack
+  `test_end_to_end.py` pattern: skipped unless `RUN_GDOC_SYNC_E2E=1` is set
+  and OAuth credentials are configured (`.env` loaded via python-dotenv;
+  token/credentials paths overridable by env var). A plain `pytest` run never
+  touches the account. Tests create real docs (in a designated Drive folder
+  named by `GDOC_SYNC_E2E_FOLDER`, default "gdoc-sync-e2e") and delete them
+  in teardown. Coverage:
+  - **Round-trip golden test:** push a feature-complete markdown fixture
+    (headings, formatting, links, lists, quotes, tables), pull it back, and
+    compare the cleaned export against a golden file
+    (`full_features.expected.md`), regenerable via a `--generate` flag. This
+    both verifies fidelity and pins down the API's actual markdown
+    import/export behaviour (escaping, table rendering) so regressions and
+    Google-side changes surface as diffs.
+  - **Comment retrieval:** create comments on the doc programmatically via
+    Drive `comments.create` (anchored where the API allows), then `pull` and
+    assert the comments file contains the thread with author, body, and
+    quoted text.
+  - **Anchor preservation:** comment on paragraph A via the API, edit only
+    paragraph B locally, revision-`push`, then re-fetch comments and assert
+    the comment on A is still anchored (not orphaned); separately edit A,
+    push past the warning, and assert it orphans — pinning down the API
+    behaviour our anchor-preservation claim rests on.
+  - **Divergence guard:** edit the doc remotely via the API, then attempt a
+    revision `push` and assert it aborts with the "run pull first" error.
 
 ## Future work (explicitly designed-for, not built)
 
