@@ -114,3 +114,4 @@ def test_table_cell_styles():
     assert len(styles) == 1                       # only **b** is styled
     assert styles[0]["range"] == {"startIndex": 31, "endIndex": 32}
     assert styles[0]["textStyle"] == {"bold": True}
+    assert styles[0]["fields"] == "bold"
