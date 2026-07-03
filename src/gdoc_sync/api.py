@@ -66,7 +66,8 @@ class GDocsApi:
         self._drive.files().delete(fileId=doc_id).execute()
 
     def find_or_create_folder(self, name):
-        q = f"name = '{name}' and mimeType = '{_FOLDER_MIME}' and trashed = false"
+        escaped = name.replace("'", "\\'")
+        q = f"name = '{escaped}' and mimeType = '{_FOLDER_MIME}' and trashed = false"
         found = self._drive.files().list(q=q, fields="files(id)").execute()["files"]
         if found:
             return found[0]["id"]

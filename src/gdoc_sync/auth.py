@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 
+import google.auth.exceptions
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -25,8 +26,11 @@ def get_credentials():
     if token_path.exists():
         creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
     if creds and creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-    elif not creds or not creds.valid:
+        try:
+            creds.refresh(Request())
+        except google.auth.exceptions.RefreshError:
+            creds = None
+    if not creds or not creds.valid:
         cred_path = _credentials_path()
         if not cred_path.exists():
             raise SystemExit(
