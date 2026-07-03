@@ -76,18 +76,20 @@ def _code_requests(block, index):
     rng = {"startIndex": index, "endIndex": index + len(text)}
     return [
         {"insertText": {"location": {"index": index}, "text": text}},
-        {
-            "updateTextStyle": {
-                "range": rng,
-                "textStyle": {"weightedFontFamily": {"fontFamily": "Courier New"}},
-                "fields": "weightedFontFamily",
-            }
-        },
+        # Paragraph style first: applying namedStyleType resets character
+        # styles, so Courier must come after it.
         {
             "updateParagraphStyle": {
                 "range": rng,
                 "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
                 "fields": "namedStyleType",
+            }
+        },
+        {
+            "updateTextStyle": {
+                "range": rng,
+                "textStyle": {"weightedFontFamily": {"fontFamily": "Courier New"}},
+                "fields": "weightedFontFamily",
             }
         },
     ]
