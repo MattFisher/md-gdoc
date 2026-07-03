@@ -31,6 +31,19 @@ def test_pull_remote_updated(tmp_path):
     assert snapshot.load(md) == "# T\n\nHello edited.\n"
 
 
+def test_pull_updated_normalizes_google_dialect(tmp_path):
+    # Google's export dialect (* bullets, trailing hard-break spaces, :----
+    # separators) is mdformat-normalized before landing in the local file.
+    md = _setup(tmp_path)
+    google_dialect = "# T\n\n* one  \n* two with **bold**  \n"
+    res = pull(md, FakeApi(export_md=google_dialect))
+    assert res.state == "updated"
+    body = binding.read(md.read_text())[2]
+    assert body == "# T\n\n- one\n- two with **bold**\n"
+    assert snapshot.load(md) == body                       # base matches file
+    assert snapshot.load_remote(md) == google_dialect      # remote kept raw
+
+
 def test_pull_conflict(tmp_path):
     local = BOUND.replace("Hello.", "Hello local.")
     md = _setup(tmp_path, local=local)

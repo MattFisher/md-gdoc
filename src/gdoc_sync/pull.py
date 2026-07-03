@@ -3,9 +3,21 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+import mdformat
+
 from . import binding, snapshot
 from .comments import from_api, render
 from .unescape import clean
+
+
+def _fmt(md):
+    """Normalize pulled markdown to a stable local dialect.
+
+    Google's export dialect (`*` bullets, trailing hard-break spaces,
+    `:----` separators) would otherwise leak into local files on every
+    pull that takes remote changes.
+    """
+    return mdformat.text(md, extensions={"gfm"})
 
 
 @dataclass
@@ -44,11 +56,12 @@ def pull(md_path, api):
 
     # Local-unchanged check: compare current local body against local snapshot.
     if base is not None and local_clean == clean(base):
-        md_path.write_text(binding.replace_body(text, remote_body), encoding="utf-8")
-        snapshot.save(md_path, remote_body)
+        body_out = _fmt(remote_body)
+        md_path.write_text(binding.replace_body(text, body_out), encoding="utf-8")
+        snapshot.save(md_path, body_out)
         snapshot.save_remote(md_path, remote_body)
         return PullResult("updated", len(threads))
 
     remote_path = md_path.parent / (md_path.name + ".remote.md")
-    remote_path.write_text(remote_body, encoding="utf-8")
+    remote_path.write_text(_fmt(remote_body), encoding="utf-8")
     return PullResult("conflict", len(threads), remote_path)
