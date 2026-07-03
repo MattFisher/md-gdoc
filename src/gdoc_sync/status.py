@@ -16,7 +16,7 @@ class StatusResult:
 
 def status(md_path, api):
     md_path = Path(md_path)
-    doc_id, url, _ = binding.read(md_path.read_text())
+    doc_id, url, _ = binding.read(md_path.read_text(encoding="utf-8"))
     if not doc_id:
         raise SystemExit(f"{md_path} has no gdoc_id in frontmatter — push it first.")
     base = snapshot.load(md_path)

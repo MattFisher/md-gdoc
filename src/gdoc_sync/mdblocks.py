@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 _HEADING = re.compile(r"^(#{1,6})\s+")
 _LIST = re.compile(r"^(\s*)([-*+]|\d+[.)])\s+")
-_TABLE_SEP = re.compile(r"^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$")
+_TABLE_SEP = re.compile(r"^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$")
 _FOOTNOTE_DEF = re.compile(r"^\[\^[^\]]+\]:")
 _IMAGE = re.compile(r"!\[")
 _FENCE = re.compile(r"^(```|~~~)")

@@ -103,3 +103,20 @@ def test_missing_snapshot_requires_replace(tmp_path):
     md = _setup(tmp_path, BOUND.replace("Two.", "Two edited."), snap=None)
     with pytest.raises(SystemExit):
         push(md, FakeApi(export_md=BODY, document=DOC), yes=True)
+
+
+def test_table_with_sibling_insert_aborts(tmp_path):
+    """Inserting a table alongside another block in one op must abort with --replace hint."""
+    # Base: single paragraph (no heading, just one block)
+    base_body = "Intro.\n"
+    base_bound = f"---\ngdoc_id: d1\ngdoc_url: u\n---\n{base_body}"
+    base_doc = _doc(["Intro."])
+    # New: the original paragraph is untouched, but we insert a table AND a new paragraph
+    # after it — but because the base only had one block and new has three, the diff will
+    # produce an insert op covering both the table and the trailing paragraph at once.
+    new_body = "Intro.\n\n| h1 | h2 |\n| -- | -- |\n| a  | b  |\n\nExtra.\n"
+    new_bound = f"---\ngdoc_id: d1\ngdoc_url: u\n---\n{new_body}"
+    md = _setup(tmp_path, new_bound, snap=base_body)
+    api = FakeApi(export_md=base_body, document=base_doc)
+    with pytest.raises(SystemExit, match="--replace"):
+        push(md, api, yes=True)

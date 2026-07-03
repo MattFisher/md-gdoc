@@ -10,10 +10,10 @@ def path_for(md_path):
 
 def load(md_path):
     p = path_for(md_path)
-    return p.read_text() if p.exists() else None
+    return p.read_text(encoding="utf-8") if p.exists() else None
 
 
 def save(md_path, body):
     p = path_for(md_path)
     p.parent.mkdir(exist_ok=True)
-    p.write_text(body)
+    p.write_text(body, encoding="utf-8")

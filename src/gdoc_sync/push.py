@@ -20,12 +20,12 @@ class PushResult:
 
 def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
     md_path = Path(md_path)
-    text = md_path.read_text()
+    text = md_path.read_text(encoding="utf-8")
     doc_id, url, body = binding.read(text)
 
     if not doc_id:
         doc_id, url = api.create_doc_from_markdown(md_path.stem, body)
-        md_path.write_text(binding.bind(text, doc_id, url))
+        md_path.write_text(binding.bind(text, doc_id, url), encoding="utf-8")
         snapshot.save(md_path, body)
         return PushResult("created", url)
 
@@ -99,7 +99,16 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
         else:                                        # pure insert
             i = op.old[0]
             insert_at = doc[i].start if i < len(doc) else doc[-1].end
-        for block in reversed(new_blocks[op.new[0] : op.new[1]]):
+        new_range = new_blocks[op.new[0] : op.new[1]]
+        if len(new_range) > 1:
+            for blk in new_range:
+                if blk.kind == "table":
+                    raise SystemExit(
+                        f"Cannot insert table block alongside sibling blocks in one op "
+                        f"({blk.source.splitlines()[0][:60]!r}). "
+                        "Use push --replace."
+                    )
+        for block in reversed(new_range):
             requests += block_requests(block, insert_at)
 
     api.batch_update(doc_id, requests)

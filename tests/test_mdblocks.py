@@ -65,3 +65,11 @@ def test_unsupported_detection():
 
 def test_empty_input():
     assert parse_blocks("") == []
+
+
+def test_single_dash_separator_parses_as_table():
+    """GFM allows a single dash per separator cell; must not fall through to paragraph."""
+    md = "| a | b |\n| - | - |\n| 1 | 2 |\n"
+    blocks = parse_blocks(md)
+    assert len(blocks) == 1
+    assert blocks[0].kind == "table"

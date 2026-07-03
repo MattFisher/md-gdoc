@@ -41,5 +41,5 @@ def get_credentials():
         flow = InstalledAppFlow.from_client_secrets_file(str(cred_path), SCOPES)
         creds = flow.run_local_server(port=0)
     token_path.parent.mkdir(parents=True, exist_ok=True)
-    token_path.write_text(creds.to_json())
+    token_path.write_text(creds.to_json(), encoding="utf-8")
     return creds

@@ -17,7 +17,7 @@ class CommentThread:
     created: str
     modified: str
     resolved: bool
-    quoted: str
+    quoted: str | None
     content: str
     replies: list = field(default_factory=list)
 
