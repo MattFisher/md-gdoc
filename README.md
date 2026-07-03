@@ -8,18 +8,17 @@ Design: `docs/superpowers/specs/2026-07-02-gdoc-sync-design.md`
 ## Setup
 
 ```bash
-python -m venv .venv && . .venv/bin/activate
-pip install -e '.[dev]'
+uv sync
 ```
 
 ## Usage
 
 ```bash
-gdoc-sync push draft.md      # first push creates the doc, binds gdoc_id
-gdoc-sync status draft.md    # any feedback yet?
-gdoc-sync pull draft.md      # comments -> draft.md.comments.md; edits merged
-gdoc-sync push draft.md      # revision push, preserves comment anchors
-gdoc-sync push draft.md --replace   # full re-import (orphans all anchors)
+uv run gdoc-sync push draft.md      # first push creates the doc, binds gdoc_id
+uv run gdoc-sync status draft.md    # any feedback yet?
+uv run gdoc-sync pull draft.md      # comments -> draft.md.comments.md; edits merged
+uv run gdoc-sync push draft.md      # revision push, preserves comment anchors
+uv run gdoc-sync push draft.md --replace   # full re-import (orphans all anchors)
 ```
 
 Auth: create a Google Cloud OAuth *desktop* client, save its JSON to
@@ -31,13 +30,13 @@ Add to consuming repos' `.gitignore`: `.sync/`, `*.comments.md`, `*.remote.md`.
 ## Test
 
 ```bash
-pytest              # unit tests, no network
+uv run pytest              # unit tests, no network
 ```
 
 ## End-to-end tests (opt-in)
 
 ```bash
-RUN_GDOC_SYNC_E2E=1 pytest tests/e2e -q
+RUN_GDOC_SYNC_E2E=1 uv run pytest tests/e2e -q
 ```
 
 Requires OAuth credentials (see Auth). Creates and deletes real docs in the

@@ -14,14 +14,17 @@ dependencies = [
     "python-frontmatter>=1.0",
 ]
 
-[project.optional-dependencies]
-dev = ["pytest>=8", "python-dotenv>=1.0"]
-
 [project.scripts]
 gdoc-sync = "gdoc_sync.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8",
+    "python-dotenv>=1.0",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
