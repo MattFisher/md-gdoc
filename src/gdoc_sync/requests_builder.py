@@ -16,6 +16,14 @@ class Run:
     bold: bool = False
     italic: bool = False
     link: str = None
+    code: bool = False
+
+
+# What Drive's own markdown import applies to inline code (probed live).
+# Exporting text in this font re-emits the `backticks`, so inline code
+# round-trips without literal backtick characters in the doc.
+_CODE_FONT = {"fontFamily": "Roboto Mono"}
+_CODE_COLOR = {"color": {"rgbColor": {"red": 0.09411765, "green": 0.5019608, "blue": 0.21960784}}}
 
 
 def inline_runs(text):
@@ -35,7 +43,7 @@ def inline_runs(text):
         elif tok.type == "link_close":
             link = None
         elif tok.type == "code_inline":
-            runs.append(Run(f"`{tok.content}`", bold > 0, italic > 0, link))
+            runs.append(Run(tok.content, bold > 0, italic > 0, link, code=True))
         elif tok.type in ("softbreak", "hardbreak"):
             runs.append(Run(" ", bold > 0, italic > 0, link))
         elif tok.type == "text" and tok.content:
@@ -46,7 +54,10 @@ def inline_runs(text):
 def _merge(runs):
     out = []
     for r in runs:
-        if out and (out[-1].bold, out[-1].italic, out[-1].link) == (r.bold, r.italic, r.link):
+        if out and (
+            (out[-1].bold, out[-1].italic, out[-1].link, out[-1].code)
+            == (r.bold, r.italic, r.link, r.code)
+        ):
             out[-1] = replace(out[-1], text=out[-1].text + r.text)
         else:
             out.append(r)
@@ -109,6 +120,10 @@ def _style_requests(runs, offset):
         if r.link:
             style["link"] = {"url": r.link}
             fields.append("link")
+        if r.code:
+            style["weightedFontFamily"] = _CODE_FONT
+            style["foregroundColor"] = _CODE_COLOR
+            fields += ["weightedFontFamily", "foregroundColor"]
         if fields:
             reqs.append({
                 "updateTextStyle": {
@@ -242,26 +257,5 @@ def table_requests(block, index):
             text = "".join(x.text for x in runs)
             at = _cell_index(index, r, c, n_cols)
             reqs.append({"insertText": {"location": {"index": at}, "text": text}})
-            offset = at
-            for x in runs:
-                end = offset + len(x.text)
-                style, fields = {}, []
-                if x.bold:
-                    style["bold"] = True
-                    fields.append("bold")
-                if x.italic:
-                    style["italic"] = True
-                    fields.append("italic")
-                if x.link:
-                    style["link"] = {"url": x.link}
-                    fields.append("link")
-                if fields:
-                    reqs.append({
-                        "updateTextStyle": {
-                            "range": {"startIndex": offset, "endIndex": end},
-                            "textStyle": style,
-                            "fields": ",".join(fields),
-                        }
-                    })
-                offset = end
+            reqs += _style_requests(runs, at)
     return reqs

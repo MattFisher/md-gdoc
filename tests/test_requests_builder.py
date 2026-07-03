@@ -25,8 +25,26 @@ def test_nested_bold_italic():
     ]
 
 
-def test_code_inline_kept_literal():
-    assert inline_runs("run `pytest` now") == [Run("run `pytest` now")]
+def test_code_inline_styled_without_backticks():
+    # Inline code drops the literal backticks and carries code=True; the
+    # Roboto Mono style makes Google's export re-emit the backticks.
+    assert inline_runs("run `pytest` now") == [
+        Run("run "),
+        Run("pytest", code=True),
+        Run(" now"),
+    ]
+
+
+def test_code_run_style_requests():
+    from gdoc_sync.requests_builder import _style_requests
+
+    reqs = _style_requests(inline_runs("run `pytest` now"), 10)
+    assert len(reqs) == 1
+    style = reqs[0]["updateTextStyle"]
+    assert style["range"] == {"startIndex": 14, "endIndex": 20}
+    assert style["textStyle"]["weightedFontFamily"] == {"fontFamily": "Roboto Mono"}
+    assert "foregroundColor" in style["textStyle"]
+    assert style["fields"] == "weightedFontFamily,foregroundColor"
 
 
 def test_softbreak_is_space():
