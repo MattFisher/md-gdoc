@@ -20,8 +20,10 @@ def status(md_path, api):
     if not doc_id:
         raise SystemExit(f"{md_path} has no gdoc_id in frontmatter — push it first.")
     base = snapshot.load(md_path)
+    base_remote = snapshot.load_remote(md_path)
     remote = clean(api.export_markdown(doc_id))
-    changed = base is None or remote != clean(base)
+    expected_remote = base_remote if base_remote is not None else (clean(base) if base is not None else None)
+    changed = expected_remote is None or remote != expected_remote
     open_comments = sum(
         1 for c in api.list_comments(doc_id)
         if not c.get("resolved") and not c.get("deleted")

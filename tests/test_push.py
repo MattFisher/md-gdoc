@@ -36,10 +36,11 @@ def _setup(tmp_path, local, snap=BODY):
 def test_first_push_binds_and_snapshots(tmp_path):
     md = tmp_path / "draft.md"
     md.write_text(BODY)
-    res = push(md, FakeApi())
+    res = push(md, FakeApi(export_md=BODY))
     assert res.state == "created"
     assert binding.read(md.read_text())[0] == "fake-id"
-    assert snapshot.load(md) == BODY
+    assert snapshot.load(md) == BODY          # local snapshot = what we sent
+    assert snapshot.load_remote(md) == BODY   # remote snapshot = what Google returned
 
 
 def test_noop_when_unchanged(tmp_path):
@@ -50,8 +51,10 @@ def test_noop_when_unchanged(tmp_path):
 
 def test_revision_push_targets_changed_block(tmp_path):
     local = BOUND.replace("Two.", "Two edited.")
+    local_body = binding.read(local)[2]
+    post_edit_remote = BODY.replace("Two.", "Two edited.")
     md = _setup(tmp_path, local)
-    api = FakeApi(export_md=BODY, document=DOC)
+    api = FakeApi(export_md=BODY, document=DOC, export_md_after_update=post_edit_remote)
     res = push(md, api, yes=True)
     assert res.state == "pushed"
     assert len(api.batch_updates) == 1               # one atomic call
@@ -61,7 +64,8 @@ def test_revision_push_targets_changed_block(tmp_path):
     assert delete["range"] == {"startIndex": 8, "endIndex": 13}
     inserts = [r for r in reqs if "insertText" in r]
     assert inserts[0]["insertText"]["text"] == "Two edited.\n"
-    assert snapshot.load(md) == binding.read(local)[2]
+    assert snapshot.load(md) == local_body             # local snapshot = what we sent
+    assert snapshot.load_remote(md) == post_edit_remote  # remote snapshot = Google's export
 
 
 def test_divergence_aborts(tmp_path):

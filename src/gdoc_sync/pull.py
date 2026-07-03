@@ -30,16 +30,23 @@ def pull(md_path, api):
     comments_path.write_text(render(threads, md_path.name), encoding="utf-8")
 
     base = snapshot.load(md_path)
+    base_remote = snapshot.load_remote(md_path)
     local_clean = clean(local_body)
 
-    if remote_body == (clean(base) if base is not None else local_clean):
-        if base is None:
+    # Remote-changed check: compare fresh export against what Google had at last push.
+    # Fall back to local snapshot (old behaviour) when remote snapshot absent.
+    expected_remote = base_remote if base_remote is not None else (clean(base) if base is not None else local_clean)
+    if remote_body == expected_remote:
+        if base is None or base_remote is None:
             snapshot.save(md_path, remote_body)
+            snapshot.save_remote(md_path, remote_body)
         return PullResult("clean", len(threads))
 
+    # Local-unchanged check: compare current local body against local snapshot.
     if base is not None and local_clean == clean(base):
         md_path.write_text(binding.replace_body(text, remote_body), encoding="utf-8")
         snapshot.save(md_path, remote_body)
+        snapshot.save_remote(md_path, remote_body)
         return PullResult("updated", len(threads))
 
     remote_path = md_path.parent / (md_path.name + ".remote.md")

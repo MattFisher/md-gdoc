@@ -62,8 +62,10 @@ def pushed(api, workdir):
     doc_id, url = api.create_doc_from_markdown("gdoc-sync e2e", SOURCE.read_text(), folder_id)
     workdir.write_text(binding.bind(workdir.read_text(), doc_id, url))
     from gdoc_sync import snapshot
+    from gdoc_sync.unescape import clean
 
     snapshot.save(workdir, binding.read(workdir.read_text())[2])
+    snapshot.save_remote(workdir, clean(api.export_markdown(doc_id)))
     try:
         yield workdir, doc_id
     finally:

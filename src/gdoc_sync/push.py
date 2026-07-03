@@ -26,7 +26,9 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
     if not doc_id:
         doc_id, url = api.create_doc_from_markdown(md_path.stem, body)
         md_path.write_text(binding.bind(text, doc_id, url), encoding="utf-8")
+        remote = clean(api.export_markdown(doc_id))
         snapshot.save(md_path, body)
+        snapshot.save_remote(md_path, remote)
         return PushResult("created", url)
 
     if replace:
@@ -36,7 +38,9 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
         ).strip().lower() not in ("y", "yes"):
             raise SystemExit("aborted")
         api.replace_doc_from_markdown(doc_id, body)
+        remote = clean(api.export_markdown(doc_id))
         snapshot.save(md_path, body)
+        snapshot.save_remote(md_path, remote)
         return PushResult("replaced", url)
 
     base = snapshot.load(md_path)
@@ -46,7 +50,9 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
             "or push --replace."
         )
 
-    if clean(api.export_markdown(doc_id)) != clean(base) and not force:
+    base_remote = snapshot.load_remote(md_path)
+    expected_remote = base_remote if base_remote is not None else clean(base)
+    if clean(api.export_markdown(doc_id)) != expected_remote and not force:
         raise SystemExit("remote has changes — run pull first (or --force)")
 
     base_blocks, new_blocks = parse_blocks(base), parse_blocks(body)
@@ -112,7 +118,9 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
             requests += block_requests(block, insert_at)
 
     api.batch_update(doc_id, requests)
+    remote = clean(api.export_markdown(doc_id))
     snapshot.save(md_path, body)
+    snapshot.save_remote(md_path, remote)
     return PushResult("pushed", url, orphaned)
 
 
