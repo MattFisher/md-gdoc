@@ -1,9 +1,10 @@
 """Thin wrapper over the Drive and Docs services."""
 
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaInMemoryUpload
+import time
 
-_DOC_MIME = "application/vnd.google-apps.document"
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
 _FOLDER_MIME = "application/vnd.google-apps.folder"
 
 
@@ -16,17 +17,15 @@ class GDocsApi:
     def doc_url(doc_id):
         return f"https://docs.google.com/document/d/{doc_id}/edit"
 
-    def create_doc_from_markdown(self, title, md, folder_id=None):
-        body = {"name": title, "mimeType": _DOC_MIME}
+    def create_doc(self, title, folder_id=None):
+        """Create a blank Google Doc and return (doc_id, url)."""
+        doc = self._docs.documents().create(body={"title": title}).execute()
+        doc_id = doc["documentId"]
         if folder_id:
-            body["parents"] = [folder_id]
-        media = MediaInMemoryUpload(md.encode("utf-8"), mimetype="text/markdown")
-        f = self._drive.files().create(body=body, media_body=media, fields="id").execute()
-        return f["id"], self.doc_url(f["id"])
-
-    def replace_doc_from_markdown(self, doc_id, md):
-        media = MediaInMemoryUpload(md.encode("utf-8"), mimetype="text/markdown")
-        self._drive.files().update(fileId=doc_id, media_body=media).execute()
+            self._drive.files().update(
+                fileId=doc_id, addParents=folder_id, fields="id,parents"
+            ).execute()
+        return doc_id, self.doc_url(doc_id)
 
     def export_markdown(self, doc_id):
         data = self._drive.files().export(fileId=doc_id, mimeType="text/markdown").execute()
@@ -36,9 +35,17 @@ class GDocsApi:
         return self._docs.documents().get(documentId=doc_id).execute()
 
     def batch_update(self, doc_id, requests):
-        self._docs.documents().batchUpdate(
-            documentId=doc_id, body={"requests": requests}
-        ).execute()
+        for attempt in range(5):
+            try:
+                self._docs.documents().batchUpdate(
+                    documentId=doc_id, body={"requests": requests}
+                ).execute()
+                return
+            except HttpError as e:
+                if e.resp.status == 429 and attempt < 4:
+                    time.sleep(2 ** attempt * 15)
+                else:
+                    raise
 
     def list_comments(self, doc_id):
         items, token = [], None

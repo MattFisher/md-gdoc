@@ -1,6 +1,6 @@
 # Feature test document
 
-Intro paragraph with **bold**, _italic_, and a [link](https://example.com).
+Intro paragraph with **bold**, _italic_, and a [link](https://example.com), plus `inline code`.
 
 ## Lists
 
@@ -14,6 +14,23 @@ Intro paragraph with **bold**, _italic_, and a [link](https://example.com).
 ## Quote
 
 > A quoted line of text.
+
+## Code blocks
+
+```json
+{
+  "type": "a json block",
+  "key": {
+    "subkey": "value",
+    "...": "..."
+  }
+}
+```
+
+```text
+a text block
+with two lines
+```
 
 ## Table
 

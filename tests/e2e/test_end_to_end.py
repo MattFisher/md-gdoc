@@ -54,17 +54,17 @@ def workdir(tmp_path):
 @pytest.fixture()
 def pushed(api, workdir):
     """Push the fixture, yield (md_path, doc_id), delete the doc after."""
-    from gdoc_sync import binding
-    from gdoc_sync.push import push
-
-    folder_id = api.find_or_create_folder(FOLDER)
-    # First push via the API wrapper directly so we can set the folder.
-    doc_id, url = api.create_doc_from_markdown("gdoc-sync e2e", SOURCE.read_text(), folder_id)
-    workdir.write_text(binding.bind(workdir.read_text(), doc_id, url))
-    from gdoc_sync import snapshot
+    from gdoc_sync import binding, snapshot
+    from gdoc_sync.mdblocks import parse_blocks
+    from gdoc_sync.push import _insert_blocks
     from gdoc_sync.unescape import clean
 
-    snapshot.save(workdir, binding.read(workdir.read_text())[2])
+    folder_id = api.find_or_create_folder(FOLDER)
+    body = SOURCE.read_text()
+    doc_id, url = api.create_doc("gdoc-sync e2e", folder_id)
+    _insert_blocks(doc_id, parse_blocks(body), api)
+    workdir.write_text(binding.bind(workdir.read_text(), doc_id, url))
+    snapshot.save(workdir, body)
     snapshot.save_remote(workdir, clean(api.export_markdown(doc_id)))
     try:
         yield workdir, doc_id
@@ -126,11 +126,14 @@ def test_divergence_guard(api, pushed):
 def _generate():
     from gdoc_sync.api import GDocsApi
     from gdoc_sync.auth import get_credentials
+    from gdoc_sync.mdblocks import parse_blocks
+    from gdoc_sync.push import _insert_blocks
     from gdoc_sync.unescape import clean
 
     api = GDocsApi(get_credentials())
     folder_id = api.find_or_create_folder(FOLDER)
-    doc_id, _ = api.create_doc_from_markdown("gdoc-sync golden", SOURCE.read_text(), folder_id)
+    doc_id, _ = api.create_doc("gdoc-sync golden", folder_id)
+    _insert_blocks(doc_id, parse_blocks(SOURCE.read_text()), api)
     try:
         EXPECTED.write_text(clean(api.export_markdown(doc_id)))
         print(f"wrote {EXPECTED}")

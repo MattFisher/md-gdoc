@@ -54,12 +54,19 @@ def test_source_roundtrip_blocks_join():
     assert [b.source for b in parse_blocks(rejoined)] == [b.source for b in blocks]
 
 
-def test_unsupported_detection():
-    md = "Text\n\n![alt](img.png)\n\n```py\ncode\n```\n\n[^1]: a footnote\n"
+def test_code_block_kind():
+    md = "Intro.\n\n```python\ndef f():\n    pass\n```\n\nAfter.\n"
     blocks = parse_blocks(md)
-    assert [b.kind for b in blocks] == ["paragraph", "other", "other", "other"]
+    assert [b.kind for b in blocks] == ["paragraph", "code", "paragraph"]
+    assert blocks[1].source == "```python\ndef f():\n    pass\n```"
+
+
+def test_unsupported_detection():
+    md = "Text\n\n![alt](img.png)\n\n[^1]: a footnote\n"
+    blocks = parse_blocks(md)
+    assert [b.kind for b in blocks] == ["paragraph", "other", "other"]
     descriptions = unsupported(blocks)
-    assert len(descriptions) == 3
+    assert len(descriptions) == 2
     assert any("image" in d for d in descriptions)
 
 

@@ -21,3 +21,19 @@ def test_normalizes_line_endings_and_blanks():
 
 def test_trailing_newline():
     assert clean("x") == "x\n"
+
+
+def test_code_block_trailing_spaces_stripped():
+    # Simulates Google export of a code block stored with \r soft-breaks:
+    # each line gains trailing spaces on export.
+    exported = "```python  \ndef f():  \n    pass  \n```  \n"
+    assert clean(exported) == "```python\ndef f():\n    pass\n```\n"
+
+
+def test_code_block_trailing_spaces_not_outside():
+    # Trailing spaces outside code blocks are preserved (GFM hard line breaks).
+    md = "line one  \nline two  \n\n```text  \ncontent  \n```\n"
+    result = clean(md)
+    assert "line one  \n" in result
+    assert "```text\n" in result
+    assert "content\n" in result

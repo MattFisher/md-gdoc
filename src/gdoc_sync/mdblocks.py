@@ -31,7 +31,7 @@ def parse_blocks(md):
             j = i + 1
             while j < n and not _FENCE.match(lines[j]):
                 j += 1
-            blocks.append(Block("other", "\n".join(lines[i : min(j + 1, n)])))
+            blocks.append(Block("code", "\n".join(lines[i : min(j + 1, n)])))
             i = j + 1
         elif _HEADING.match(line):
             blocks.append(Block("heading", line.rstrip(), level=len(_HEADING.match(line).group(1))))

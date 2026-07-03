@@ -100,7 +100,30 @@ def test_replace_path(tmp_path):
     api = FakeApi(export_md=BODY, document=DOC)
     res = push(md, api, replace=True, yes=True)
     assert res.state == "replaced"
-    assert api.replaced and "Anything" in api.replaced[0]
+    # First batchUpdate clears the doc; the rest re-insert the new body.
+    delete = api.batch_updates[0][0]["deleteContentRange"]["range"]
+    assert delete == {"startIndex": 1, "endIndex": DOC["body"]["content"][-1]["endIndex"] - 1}
+    inserted = "".join(
+        r["insertText"]["text"]
+        for reqs in api.batch_updates[1:] for r in reqs if "insertText" in r
+    )
+    assert "Anything" in inserted
+
+
+def test_revision_push_of_code_block(tmp_path):
+    """Editing a fenced code block goes through the diff path (kind 'code', not 'other')."""
+    base_body = "# T\n\n```python\nx = 1\n```\n"
+    bound = f"---\ngdoc_id: d1\ngdoc_url: u\n---\n{base_body}"
+    local = bound.replace("x = 1", "x = 2")
+    # Code block is a single paragraph in the doc (soft line breaks).
+    doc = _doc(["T", "```python\vx = 1\v```"])
+    md = _setup(tmp_path, local, snap=base_body)
+    api = FakeApi(export_md=base_body, document=doc)
+    res = push(md, api, yes=True)
+    assert res.state == "pushed"
+    reqs = api.batch_updates[0]
+    inserts = [r for r in reqs if "insertText" in r]
+    assert inserts[0]["insertText"]["text"] == "```python\vx = 2\v```\n"
 
 
 def test_missing_snapshot_requires_replace(tmp_path):

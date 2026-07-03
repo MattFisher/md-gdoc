@@ -65,15 +65,36 @@ def content_text(block):
     return block.source
 
 
-def block_requests(block, index):
-    if block.kind == "table":
-        return table_requests(block, index)
-    runs = inline_runs(content_text(block).replace("\n", " "))
-    prefix = "\t" * block.level if block.kind == "list_item" else ""
-    text = prefix + "".join(r.text for r in runs) + "\n"
-    reqs = [{"insertText": {"location": {"index": index}, "text": text}}]
+def _code_requests(block, index):
+    # Store as one paragraph with soft line breaks (\v) between lines so the
+    # whole block is a single doc paragraph (keeps docmodel alignment 1:1) and
+    # Google exports it without blank-line separation. \r is NOT accepted by
+    # the Docs API as a line break (it gets dropped, shifting all indices).
+    # AUTHORITY: the e2e round-trip test (tests/e2e) validates this encoding
+    # against the live API. If e2e disagrees, fix this function, not e2e.
+    text = block.source.rstrip("\n").replace("\n", "\v") + "\n"
+    rng = {"startIndex": index, "endIndex": index + len(text)}
+    return [
+        {"insertText": {"location": {"index": index}, "text": text}},
+        {
+            "updateTextStyle": {
+                "range": rng,
+                "textStyle": {"weightedFontFamily": {"fontFamily": "Courier New"}},
+                "fields": "weightedFontFamily",
+            }
+        },
+        {
+            "updateParagraphStyle": {
+                "range": rng,
+                "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                "fields": "namedStyleType",
+            }
+        },
+    ]
 
-    offset = index + len(prefix)
+
+def _style_requests(runs, offset):
+    reqs = []
     for r in runs:
         end = offset + len(r.text)
         style, fields = {}, []
@@ -95,12 +116,75 @@ def block_requests(block, index):
                 }
             })
         offset = end
+    return reqs
+
+
+def list_requests(blocks, index):
+    """Requests for a run of consecutive list_item blocks (same ordered-ness).
+
+    The whole run gets ONE insertText and ONE createParagraphBullets: applying
+    bullets per item resets tab-derived nesting to level 0 (live-API behaviour),
+    so nested items only survive when the run is inserted as a unit.
+    """
+    texts, style_reqs, offset = [], [], index
+    for block in blocks:
+        runs = inline_runs(content_text(block).replace("\n", " "))
+        prefix = "\t" * block.level
+        texts.append(prefix + "".join(r.text for r in runs) + "\n")
+        style_reqs += _style_requests(runs, offset + len(prefix))
+        offset += len(texts[-1])
+    full = "".join(texts)
+    preset = "NUMBERED_DECIMAL_ALPHA_ROMAN" if blocks[0].ordered else "BULLET_DISC_CIRCLE_SQUARE"
+    return [
+        {"insertText": {"location": {"index": index}, "text": full}},
+        *style_reqs,
+        # Last: createParagraphBullets consumes the leading tabs, shifting
+        # indices, so every index-addressed request must come before it.
+        {"createParagraphBullets": {
+            "range": {"startIndex": index, "endIndex": index + len(full)},
+            "bulletPreset": preset,
+        }},
+    ]
+
+
+def segment_blocks(blocks):
+    """Split blocks into runs: consecutive list_items with the same ordered-ness
+    form one run (they must be inserted together — see list_requests); every
+    other block is a run of one."""
+    runs = []
+    for b in blocks:
+        if (
+            b.kind == "list_item" and runs
+            and runs[-1][0].kind == "list_item" and runs[-1][0].ordered == b.ordered
+        ):
+            runs[-1].append(b)
+        else:
+            runs.append([b])
+    return runs
+
+
+def run_requests(run, index):
+    """Requests for one segment_blocks() run."""
+    if run[0].kind == "list_item":
+        return list_requests(run, index)
+    return block_requests(run[0], index)
+
+
+def block_requests(block, index):
+    if block.kind == "table":
+        return table_requests(block, index)
+    if block.kind == "code":
+        return _code_requests(block, index)
+    if block.kind == "list_item":
+        return list_requests([block], index)
+    runs = inline_runs(content_text(block).replace("\n", " "))
+    text = "".join(r.text for r in runs) + "\n"
+    reqs = [{"insertText": {"location": {"index": index}, "text": text}}]
 
     rng = {"startIndex": index, "endIndex": index + len(text)}
-    if block.kind == "list_item":
-        preset = "NUMBERED_DECIMAL_ALPHA_ROMAN" if block.ordered else "BULLET_DISC_CIRCLE_SQUARE"
-        reqs.append({"createParagraphBullets": {"range": rng, "bulletPreset": preset}})
-    elif block.kind == "quote":
+    # Named paragraph styles must be applied BEFORE character styles: applying
+    # a namedStyleType resets bold/italic/links on the range.
+    if block.kind == "quote":
         reqs.append({
             "updateParagraphStyle": {
                 "range": rng,
@@ -121,7 +205,8 @@ def block_requests(block, index):
                 "fields": "namedStyleType",
             }
         })
-    return reqs
+
+    return reqs + _style_requests(runs, index)
 
 
 def parse_table(source):

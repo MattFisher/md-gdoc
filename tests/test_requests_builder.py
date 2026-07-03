@@ -43,12 +43,13 @@ def test_content_text_strips_markers():
 def test_paragraph_requests():
     reqs = block_requests(Block("paragraph", "Hello **world**"), 10)
     assert reqs[0] == {"insertText": {"location": {"index": 10}, "text": "Hello world\n"}}
-    style = reqs[1]["updateTextStyle"]
-    assert style["range"] == {"startIndex": 16, "endIndex": 21}
-    assert style["textStyle"] == {"bold": True} and style["fields"] == "bold"
-    para = reqs[-1]["updateParagraphStyle"]
+    # Paragraph style precedes character styles: namedStyleType resets them.
+    para = reqs[1]["updateParagraphStyle"]
     assert para["paragraphStyle"]["namedStyleType"] == "NORMAL_TEXT"
     assert para["range"] == {"startIndex": 10, "endIndex": 22}
+    style = reqs[2]["updateTextStyle"]
+    assert style["range"] == {"startIndex": 16, "endIndex": 21}
+    assert style["textStyle"] == {"bold": True} and style["fields"] == "bold"
 
 
 def test_heading_requests():
@@ -59,7 +60,7 @@ def test_heading_requests():
 
 def test_link_run_style():
     reqs = block_requests(Block("paragraph", "[x](http://y)"), 1)
-    style = reqs[1]["updateTextStyle"]
+    style = reqs[2]["updateTextStyle"]
     assert style["textStyle"]["link"] == {"url": "http://y"}
     assert style["fields"] == "link"
 
@@ -72,6 +73,37 @@ def test_list_item_requests_nested():
     assert bullets["range"] == {"startIndex": 5, "endIndex": 11}
 
 
+def test_list_run_groups_into_single_insert():
+    from gdoc_sync.requests_builder import list_requests, segment_blocks
+
+    blocks = [
+        Block("list_item", "- a", level=0),
+        Block("list_item", "- **b**", level=0),
+        Block("list_item", "  - c", level=1),
+    ]
+    assert segment_blocks(blocks) == [blocks]  # one run
+    reqs = list_requests(blocks, 5)
+    # One insertText for the whole run; nesting encoded as leading tabs.
+    assert reqs[0]["insertText"]["text"] == "a\nb\n\tc\n"
+    # Bold on "b" lands at its offset within the combined text.
+    style = next(r["updateTextStyle"] for r in reqs if "updateTextStyle" in r)
+    assert style["range"] == {"startIndex": 7, "endIndex": 8}
+    # Exactly one createParagraphBullets, last, covering the whole run.
+    assert list(reqs[-1]) == ["createParagraphBullets"]
+    assert reqs[-1]["createParagraphBullets"]["range"] == {"startIndex": 5, "endIndex": 12}
+
+
+def test_segment_blocks_splits_on_ordered_change():
+    from gdoc_sync.requests_builder import segment_blocks
+
+    blocks = [
+        Block("list_item", "- a"),
+        Block("list_item", "1. b", ordered=True),
+        Block("paragraph", "p"),
+    ]
+    assert segment_blocks(blocks) == [[blocks[0]], [blocks[1]], [blocks[2]]]
+
+
 def test_ordered_list_preset():
     reqs = block_requests(Block("list_item", "1. one", ordered=True), 1)
     assert reqs[-1]["createParagraphBullets"]["bulletPreset"] == "NUMBERED_DECIMAL_ALPHA_ROMAN"
@@ -82,6 +114,30 @@ def test_quote_indent():
     para = reqs[-1]["updateParagraphStyle"]
     assert para["paragraphStyle"]["indentStart"] == {"magnitude": 36, "unit": "PT"}
     assert "indentStart" in para["fields"]
+
+
+CODE = Block("code", "```python\ndef f():\n    pass\n```")
+
+
+def test_code_block_uses_soft_breaks():
+    reqs = block_requests(CODE, 5)
+    insert = reqs[0]["insertText"]
+    assert insert["location"]["index"] == 5
+    # \n between lines replaced with \v (soft break); trailing paragraph \n preserved
+    assert insert["text"] == "```python\vdef f():\v    pass\v```\n"
+
+
+def test_code_block_courier_new():
+    reqs = block_requests(CODE, 5)
+    style = next(r["updateTextStyle"] for r in reqs if "updateTextStyle" in r)
+    assert style["textStyle"] == {"weightedFontFamily": {"fontFamily": "Courier New"}}
+    assert style["fields"] == "weightedFontFamily"
+
+
+def test_code_block_normal_text_paragraph():
+    reqs = block_requests(CODE, 5)
+    para = next(r["updateParagraphStyle"] for r in reqs if "updateParagraphStyle" in r)
+    assert para["paragraphStyle"]["namedStyleType"] == "NORMAL_TEXT"
 
 
 TABLE = Block("table", "| h1 | h2 |\n| -- | -- |\n| a | **b** |")
