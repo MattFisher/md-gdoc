@@ -55,11 +55,13 @@ def main(argv=None):
         else:
             print(f"Both sides changed — remote copy written to {res.remote_path}.")
             print("Merge manually (or with your agent), then push.")
-    else:
+    elif args.command == "status":
         from .status import status
 
         res = status(args.file, api)
         print(res.url)
         print(f"Remote changes: {'yes' if res.remote_changed else 'no'}")
         print(f"Open comments: {res.open_comments}")
+    else:
+        parser.error(f"unknown command {args.command!r}")
     return 0
