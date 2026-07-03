@@ -14,11 +14,17 @@ def _clean_code_blocks(md):
     spaces on every line that must be removed to produce valid fenced markdown.
     """
     lines, result, in_fence = md.split("\n"), [], False
-    for line in lines:
+    for i, line in enumerate(lines):
         stripped = line.rstrip()
         if stripped.startswith("```") or stripped.startswith("~~~"):
+            closing = in_fence
             in_fence = not in_fence
             result.append(stripped)
+            # Google exports adjacent paragraphs with a hard break instead of
+            # a blank line; restore the blank line after a closing fence so
+            # back-to-back code blocks don't fuse in the pulled markdown.
+            if closing and i + 1 < len(lines) and lines[i + 1].strip():
+                result.append("")
         elif in_fence:
             result.append(stripped)
         else:

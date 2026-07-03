@@ -24,10 +24,17 @@ def test_trailing_newline():
 
 
 def test_code_block_trailing_spaces_stripped():
-    # Simulates Google export of a code block stored with \r soft-breaks:
+    # Simulates Google export of a code block stored with \v soft-breaks:
     # each line gains trailing spaces on export.
     exported = "```python  \ndef f():  \n    pass  \n```  \n"
     assert clean(exported) == "```python\ndef f():\n    pass\n```\n"
+
+
+def test_adjacent_code_blocks_get_blank_line():
+    # Google exports back-to-back code paragraphs with a hard break, not a
+    # blank line; clean() must re-separate them.
+    exported = "```json  \n{}  \n```  \n```text  \nhi  \n```  \nAfter.\n"
+    assert clean(exported) == "```json\n{}\n```\n\n```text\nhi\n```\n\nAfter.\n"
 
 
 def test_code_block_trailing_spaces_not_outside():
