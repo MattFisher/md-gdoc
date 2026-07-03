@@ -24,10 +24,55 @@ def test_trailing_newline():
 
 
 def test_code_block_trailing_spaces_stripped():
-    # Simulates Google export of a code block stored with \v soft-breaks:
-    # each line gains trailing spaces on export.
+    # Legacy format: code blocks from docs pushed before the code-font change
+    # export as plain fence lines with hard-break trailing spaces.
     exported = "```python  \ndef f():  \n    pass  \n```  \n"
     assert clean(exported) == "```python\ndef f():\n    pass\n```\n"
+
+
+def test_span_encoded_code_block_decoded():
+    # Current format: code-font paragraphs export as one inline code span per
+    # line; fences use multi-backtick delimiters.
+    exported = (
+        "Before.  \n"
+        "```` ```python ````  \n"
+        "`def f():`  \n"
+        "    `return 1`  \n"
+        "```` ``` ````  \n"
+        "After.  \n"
+    )
+    assert clean(exported) == (
+        "Before.  \n\n```python\ndef f():\n    return 1\n```\n\nAfter.  \n"
+    )
+
+
+def test_span_encoded_code_preserves_backticks_and_escapes():
+    # Span content is emitted raw by the exporter: backticks use CommonMark
+    # delimiters and backslashes must NOT be un-escaped.
+    exported = (
+        "```` ```md ````  \n"
+        "``run `pytest` -k \"x\"``  \n"
+        "`literal \\* star`  \n"
+        "\n"
+        "`last`  \n"
+        "```` ``` ````  \n"
+    )
+    assert clean(exported) == (
+        '```md\nrun `pytest` -k "x"\nliteral \\* star\n\nlast\n```\n'
+    )
+
+
+def test_span_encoded_adjacent_blocks_separated():
+    exported = (
+        "```` ```a ````  \n`x`  \n```` ``` ````  \n"
+        "```` ```b ````  \n`y`  \n```` ``` ````  \n"
+    )
+    assert clean(exported) == "```a\nx\n```\n\n```b\ny\n```\n"
+
+
+def test_clean_idempotent_on_local_fenced_markdown():
+    local = "# T\n\n```python\ndef f():\n    pass\n```\n\nAfter.\n"
+    assert clean(local) == local
 
 
 def test_adjacent_code_blocks_get_blank_line():

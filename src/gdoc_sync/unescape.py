@@ -2,16 +2,69 @@
 
 import re
 
+from markdown_it import MarkdownIt
+
 _ESCAPED = re.compile(r"\\([\\`*_{}\[\]()#+\-.!|<>~\"'])")
 _BLANKS = re.compile(r"\n{3,}")
+_SPAN_LINE = re.compile(r"^(\s*)(`+.*`+)\s*$")
+_md = MarkdownIt("commonmark")
+
+
+def _span_content(line):
+    """Return (indent, content) if line is exactly one inline code span."""
+    m = _SPAN_LINE.match(line)
+    if not m:
+        return None
+    tokens = _md.parseInline(m.group(2))[0].children or []
+    if len(tokens) == 1 and tokens[0].type == "code_inline":
+        return m.group(1), tokens[0].content
+    return None
+
+
+def _extract_code_regions(md):
+    """Decode span-encoded code blocks into placeholders; return (md, stash).
+
+    Code-block paragraphs are stored in a code font, so Google's export wraps
+    each line in an inline code span (with CommonMark multi-backtick
+    delimiters when the code itself contains backticks). A full-line span
+    whose content starts with ``` opens a block; a bare ``` span closes it.
+    Extraction happens BEFORE the un-escape pass so code content — which the
+    exporter emits raw inside spans — stays byte-exact.
+    """
+    lines, out, stash, region = md.split("\n"), [], [], None
+    for line in lines:
+        sc = _span_content(line)
+        if region is None:
+            if sc and sc[1].startswith("```"):
+                region = [sc[1]]
+            else:
+                out.append(line)
+        elif sc and sc[1] == "```":
+            region.append("```")
+            out += ["", f"\x00{len(stash)}\x00", ""]
+            stash.append("\n".join(region))
+            region = None
+        elif sc:
+            region.append(sc[0] + sc[1])
+        else:
+            region.append(line.rstrip())
+    if region is not None:                        # unterminated: emit as-is
+        out += region
+    return "\n".join(out), stash
+
+
+def _restore_code_regions(md, stash):
+    for i, block in enumerate(stash):
+        md = md.replace(f"\x00{i}\x00", block)
+    return md
 
 
 def _clean_code_blocks(md):
-    """Strip trailing whitespace from lines within fenced code blocks.
+    """Strip trailing whitespace within legacy escaped-fence code blocks.
 
-    Google Docs exports soft line breaks (\\v) as trailing spaces. Code blocks
-    are stored with \\v separators so they arrive here with spurious trailing
-    spaces on every line that must be removed to produce valid fenced markdown.
+    Docs pushed before the code-font change exported code blocks as escaped
+    \\`\\`\\` fence lines with hard-break trailing spaces; keep decoding them
+    so pulls from older docs still reconstruct valid fenced markdown.
     """
     lines, result, in_fence = md.split("\n"), [], False
     for i, line in enumerate(lines):
@@ -34,7 +87,9 @@ def _clean_code_blocks(md):
 
 def clean(md):
     md = md.replace("\r\n", "\n")
+    md, stash = _extract_code_regions(md)
     md = _ESCAPED.sub(r"\1", md)
     md = _clean_code_blocks(md)
     md = _BLANKS.sub("\n\n", md)
-    return md.rstrip("\n") + "\n"
+    md = _restore_code_regions(md, stash)
+    return md.strip("\n") + "\n"

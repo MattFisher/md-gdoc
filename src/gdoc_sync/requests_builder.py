@@ -19,10 +19,11 @@ class Run:
     code: bool = False
 
 
-# What Drive's own markdown import applies to inline code (probed live).
-# Exporting text in this font re-emits the `backticks`, so inline code
-# round-trips without literal backtick characters in the doc.
-_CODE_FONT = {"fontFamily": "Roboto Mono"}
+# Docs' code-font family (Fira Code, like Roboto Mono which Drive's own
+# markdown import uses, but per Matt's preference). Exporting text in a code
+# font re-emits `backticks` around it, so inline code round-trips without
+# literal backtick characters in the doc; the color matches Drive's import.
+_CODE_FONT = {"fontFamily": "Fira Code"}
 _CODE_COLOR = {"color": {"rgbColor": {"red": 0.09411765, "green": 0.5019608, "blue": 0.21960784}}}
 
 
@@ -78,9 +79,11 @@ def content_text(block):
 
 def _code_requests(block, index):
     # Store as one paragraph with soft line breaks (\v) between lines so the
-    # whole block is a single doc paragraph (keeps docmodel alignment 1:1) and
-    # Google exports it without blank-line separation. \r is NOT accepted by
-    # the Docs API as a line break (it gets dropped, shifting all indices).
+    # whole block is a single doc paragraph (keeps docmodel alignment 1:1).
+    # \r is NOT accepted by the Docs API as a line break (it gets dropped,
+    # shifting all indices). Because the paragraph is in a code font, export
+    # wraps each line in an inline code span; unescape._extract_code_regions
+    # decodes that back into a fenced block.
     # AUTHORITY: the e2e round-trip test (tests/e2e) validates this encoding
     # against the live API. If e2e disagrees, fix this function, not e2e.
     text = block.source.rstrip("\n").replace("\n", "\v") + "\n"
@@ -88,7 +91,7 @@ def _code_requests(block, index):
     return [
         {"insertText": {"location": {"index": index}, "text": text}},
         # Paragraph style first: applying namedStyleType resets character
-        # styles, so Courier must come after it.
+        # styles, so the font must come after it.
         {
             "updateParagraphStyle": {
                 "range": rng,
@@ -99,7 +102,7 @@ def _code_requests(block, index):
         {
             "updateTextStyle": {
                 "range": rng,
-                "textStyle": {"weightedFontFamily": {"fontFamily": "Courier New"}},
+                "textStyle": {"weightedFontFamily": _CODE_FONT},
                 "fields": "weightedFontFamily",
             }
         },

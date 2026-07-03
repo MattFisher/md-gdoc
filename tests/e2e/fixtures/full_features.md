@@ -32,6 +32,12 @@ a text block
 with two lines
 ```
 
+A paragraph
+
+```text
+Followed by a text block
+```
+
 ## Table
 
 | Column A | Column B |

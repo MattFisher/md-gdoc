@@ -42,7 +42,7 @@ def test_code_run_style_requests():
     assert len(reqs) == 1
     style = reqs[0]["updateTextStyle"]
     assert style["range"] == {"startIndex": 14, "endIndex": 20}
-    assert style["textStyle"]["weightedFontFamily"] == {"fontFamily": "Roboto Mono"}
+    assert style["textStyle"]["weightedFontFamily"] == {"fontFamily": "Fira Code"}
     assert "foregroundColor" in style["textStyle"]
     assert style["fields"] == "weightedFontFamily,foregroundColor"
 
@@ -145,10 +145,10 @@ def test_code_block_uses_soft_breaks():
     assert insert["text"] == "```python\vdef f():\v    pass\v```\n"
 
 
-def test_code_block_courier_new():
+def test_code_block_font():
     reqs = block_requests(CODE, 5)
     style = next(r["updateTextStyle"] for r in reqs if "updateTextStyle" in r)
-    assert style["textStyle"] == {"weightedFontFamily": {"fontFamily": "Courier New"}}
+    assert style["textStyle"] == {"weightedFontFamily": {"fontFamily": "Fira Code"}}
     assert style["fields"] == "weightedFontFamily"
 
 
