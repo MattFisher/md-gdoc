@@ -4,10 +4,9 @@ Intro paragraph with **bold**, *italic*, and a [link](https://example.com), plus
 
 ## Lists
 
-- first bullet  
-- second bullet with **bold**  
-  - nested bullet  
-
+* first bullet  
+* second bullet with **bold**  
+  * nested bullet  
 1. numbered one  
 2. numbered two
 
@@ -30,6 +29,12 @@ A quoted line of text.
 ```text
 a text block
 with two lines
+```
+
+A paragraph
+
+```text
+Followed by a text block
 ```
 
 ## Table

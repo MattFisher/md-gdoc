@@ -95,8 +95,14 @@ def _code_requests(block, index):
         {
             "updateParagraphStyle": {
                 "range": rng,
-                "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
-                "fields": "namedStyleType",
+                "paragraphStyle": {
+                    "namedStyleType": "NORMAL_TEXT",
+                    # Code blocks are single paragraphs, so without spacing
+                    # adjacent blocks (and surrounding text) render flush.
+                    "spaceAbove": {"magnitude": 6, "unit": "PT"},
+                    "spaceBelow": {"magnitude": 6, "unit": "PT"},
+                },
+                "fields": "namedStyleType,spaceAbove,spaceBelow",
             }
         },
         {
