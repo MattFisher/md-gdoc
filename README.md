@@ -33,3 +33,13 @@ Add to consuming repos' `.gitignore`: `.sync/`, `*.comments.md`, `*.remote.md`.
 ```bash
 pytest              # unit tests, no network
 ```
+
+## End-to-end tests (opt-in)
+
+```bash
+RUN_GDOC_SYNC_E2E=1 pytest tests/e2e -q
+```
+
+Requires OAuth credentials (see Auth). Creates and deletes real docs in the
+Drive folder `gdoc-sync-e2e` (override: GDOC_SYNC_E2E_FOLDER). Regenerate the
+golden export: `RUN_GDOC_SYNC_E2E=1 python -m tests.e2e.test_end_to_end --generate`
