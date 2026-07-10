@@ -1,11 +1,43 @@
 """Thin wrapper over the Drive and Docs services."""
 
+import re
 import time
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 _FOLDER_MIME = "application/vnd.google-apps.folder"
+
+
+def _unescape_md(text):
+    """Remove backslash escapes that Drive adds to markdown special chars."""
+    return re.sub(r"\\(.)", r"\1", text)
+
+
+def _split_by_tabs(full_md, tabs):
+    """Split Drive's concatenated export (tabs become H1s) into {tab_id: body}."""
+    title_to_id = {t["title"]: t["id"] for t in tabs}
+    lines = full_md.split("\n")
+    markers = []
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if s.startswith("# "):
+            candidate = _unescape_md(s[2:].strip())
+            if candidate in title_to_id:
+                markers.append((i, title_to_id[candidate]))
+    if not markers:
+        return {tabs[0]["id"]: full_md}
+    result = {}
+    # Content before the first marker → first tab (if that tab has no marker)
+    first_tab_id = tabs[0]["id"]
+    if markers[0][0] > 0 and first_tab_id not in {m[1] for m in markers}:
+        pre = "\n".join(lines[:markers[0][0]]).strip()
+        result[first_tab_id] = (pre + "\n") if pre else "\n"
+    for n, (start, tab_id) in enumerate(markers):
+        end = markers[n + 1][0] if n + 1 < len(markers) else len(lines)
+        content = "\n".join(lines[start + 1:end]).strip()
+        result[tab_id] = (content + "\n") if content else "\n"
+    return result
 
 
 class GDocsApi:
@@ -33,6 +65,42 @@ class GDocsApi:
 
     def get_document(self, doc_id):
         return self._docs.documents().get(documentId=doc_id).execute()
+
+    def list_tabs(self, doc_id):
+        """Return [{id, title, index}] for each user-created tab, or [] for untabbed docs.
+
+        Docs without user-created tabs have one implicit tab; we treat those as untabbed
+        and return [].
+        """
+        doc = self._docs.documents().get(documentId=doc_id, includeTabsContent=True).execute()
+        raw = doc.get("tabs", [])
+        if len(raw) <= 1:
+            return []
+        return [
+            {"id": t["tabProperties"]["tabId"],
+             "title": t["tabProperties"]["title"],
+             "index": t["tabProperties"]["index"]}
+            for t in raw
+        ]
+
+    def get_body_content(self, doc_id, tab_id=None):
+        """Return body content list for the doc (or a specific tab)."""
+        if tab_id:
+            doc = self._docs.documents().get(documentId=doc_id, includeTabsContent=True).execute()
+            for t in doc.get("tabs", []):
+                if t["tabProperties"]["tabId"] == tab_id:
+                    return t["documentTab"]["body"]["content"]
+            raise SystemExit(f"Tab {tab_id!r} not found in {doc_id!r}")
+        return self._docs.documents().get(documentId=doc_id).execute()["body"]["content"]
+
+    def export_tab_markdown(self, doc_id, tab_id):
+        """Export markdown for one tab by splitting the full Drive export."""
+        tabs = self.list_tabs(doc_id)
+        full_md = self.export_markdown(doc_id)
+        if not tabs:
+            return full_md
+        split = _split_by_tabs(full_md, tabs)
+        return split.get(tab_id, full_md)
 
     def batch_update(self, doc_id, requests):
         for attempt in range(5):

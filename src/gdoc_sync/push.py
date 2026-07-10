@@ -22,6 +22,7 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
     md_path = Path(md_path)
     text = md_path.read_text(encoding="utf-8")
     doc_id, url, body = binding.read(text)
+    tab_id = binding.tab_id(text)
 
     if not doc_id:
         blocks = parse_blocks(body)
@@ -39,9 +40,9 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
             "anchors. Continue? [y/N] "
         ).strip().lower() not in ("y", "yes"):
             raise SystemExit("aborted")
-        _clear_doc(doc_id, api)
-        _insert_blocks(doc_id, parse_blocks(body), api)
-        remote = clean(api.export_markdown(doc_id))
+        _clear_doc(doc_id, api, tab_id)
+        _insert_blocks(doc_id, parse_blocks(body), api, tab_id)
+        remote = clean(api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id))
         snapshot.save(md_path, body)
         snapshot.save_remote(md_path, remote)
         return PushResult("replaced", url)
@@ -55,7 +56,8 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
 
     base_remote = snapshot.load_remote(md_path)
     expected_remote = base_remote if base_remote is not None else clean(base)
-    if clean(api.export_markdown(doc_id)) != expected_remote and not force:
+    current_remote = clean(api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id))
+    if current_remote != expected_remote and not force:
         raise SystemExit("remote has changes — run pull first (or --force)")
 
     base_blocks, new_blocks = parse_blocks(base), parse_blocks(body)
@@ -77,7 +79,11 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
             "Use push --replace."
         )
 
-    doc = doc_blocks(api.get_document(doc_id))
+    if tab_id:
+        content = api.get_body_content(doc_id, tab_id)
+        doc = doc_blocks({"body": {"content": content}})
+    else:
+        doc = doc_blocks(api.get_document(doc_id))
     try:
         check_alignment(doc, base_blocks)
     except AlignmentError as e:
@@ -102,9 +108,10 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
             # includes the doc's terminating newline. If the live API returns 400, clamp
             # end to end-1 and insert with a leading "\n" instead.
             insert_at = start
-            requests.append(
-                {"deleteContentRange": {"range": {"startIndex": start, "endIndex": end}}}
-            )
+            rng = {"startIndex": start, "endIndex": end}
+            if tab_id:
+                rng["tabId"] = tab_id
+            requests.append({"deleteContentRange": {"range": rng}})
         else:                                        # pure insert
             i = op.old[0]
             insert_at = doc[i].start if i < len(doc) else doc[-1].end
@@ -118,16 +125,16 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
                         "Use push --replace."
                     )
         for run in reversed(segment_blocks(new_range)):
-            requests += run_requests(run, insert_at)
+            requests += run_requests(run, insert_at, tab_id)
 
     api.batch_update(doc_id, requests)
-    remote = clean(api.export_markdown(doc_id))
+    remote = clean(api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id))
     snapshot.save(md_path, body)
     snapshot.save_remote(md_path, remote)
     return PushResult("pushed", url, orphaned)
 
 
-def _insert_blocks(doc_id, blocks, api):
+def _insert_blocks(doc_id, blocks, api, tab_id=None):
     """Populate a blank doc with blocks, inserting one run per batchUpdate
     (consecutive list items form one run so their nesting survives).
 
@@ -137,18 +144,21 @@ def _insert_blocks(doc_id, blocks, api):
     re-fetching is slower but always correct.
     """
     for run in segment_blocks(blocks):
-        content = api.get_document(doc_id)["body"]["content"]
+        content = api.get_body_content(doc_id, tab_id)
         index = _trailing_para_index(content)
-        api.batch_update(doc_id, run_requests(run, index))
+        api.batch_update(doc_id, run_requests(run, index, tab_id))
 
 
-def _clear_doc(doc_id, api):
+def _clear_doc(doc_id, api, tab_id=None):
     """Delete all body content, leaving the doc's final empty paragraph."""
-    content = api.get_document(doc_id)["body"]["content"]
+    content = api.get_body_content(doc_id, tab_id)
     end = content[-1]["endIndex"]
     if end > 2:  # a blank doc ends at index 2; nothing to delete below that
+        rng = {"startIndex": 1, "endIndex": end - 1}
+        if tab_id:
+            rng["tabId"] = tab_id
         api.batch_update(doc_id, [
-            {"deleteContentRange": {"range": {"startIndex": 1, "endIndex": end - 1}}}
+            {"deleteContentRange": {"range": rng}}
         ])
 
 

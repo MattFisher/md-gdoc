@@ -31,14 +31,16 @@ def pull(md_path, api):
     md_path = Path(md_path)
     text = md_path.read_text(encoding="utf-8")
     doc_id, _, local_body = binding.read(text)
+    tab_id = binding.tab_id(text)
     if not doc_id:
         raise SystemExit(
             f"{md_path} has no gdoc_id in frontmatter — push it first."
         )
 
-    remote_body = clean(api.export_markdown(doc_id))
+    remote_body = clean(api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id))
     threads = from_api(api.list_comments(doc_id))
-    comments_path = md_path.parent / (md_path.name + ".comments.md")
+    shared_cf = binding.comments_file(text)
+    comments_path = (md_path.parent / shared_cf) if shared_cf else (md_path.parent / (md_path.name + ".comments.md"))
     comments_path.write_text(render(threads, md_path.name), encoding="utf-8")
 
     base = snapshot.load(md_path)
