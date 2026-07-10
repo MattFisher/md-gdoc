@@ -10,6 +10,20 @@ _md = MarkdownIt("commonmark")
 _MARKER = {"heading": _re.compile(r"^#{1,6}\s+"), "list_item": _re.compile(r"^\s*([-*+]|\d+[.)])\s+")}
 
 
+def _loc(index, tab_id=None):
+    d = {"index": index}
+    if tab_id:
+        d["tabId"] = tab_id
+    return {"location": d}
+
+
+def _rng(start, end, tab_id=None):
+    d = {"startIndex": start, "endIndex": end}
+    if tab_id:
+        d["tabId"] = tab_id
+    return d
+
+
 @dataclass(frozen=True)
 class Run:
     text: str
@@ -77,7 +91,7 @@ def content_text(block):
     return block.source
 
 
-def _code_requests(block, index):
+def _code_requests(block, index, tab_id=None):
     # Store as one paragraph with soft line breaks (\v) between lines so the
     # whole block is a single doc paragraph (keeps docmodel alignment 1:1).
     # \r is NOT accepted by the Docs API as a line break (it gets dropped,
@@ -87,9 +101,9 @@ def _code_requests(block, index):
     # AUTHORITY: the e2e round-trip test (tests/e2e) validates this encoding
     # against the live API. If e2e disagrees, fix this function, not e2e.
     text = block.source.rstrip("\n").replace("\n", "\v") + "\n"
-    rng = {"startIndex": index, "endIndex": index + len(text)}
+    rng = _rng(index, index + len(text), tab_id)
     return [
-        {"insertText": {"location": {"index": index}, "text": text}},
+        {"insertText": {**_loc(index, tab_id), "text": text}},
         # Paragraph style first: applying namedStyleType resets character
         # styles, so the font must come after it.
         {
@@ -115,7 +129,7 @@ def _code_requests(block, index):
     ]
 
 
-def _style_requests(runs, offset):
+def _style_requests(runs, offset, tab_id=None):
     reqs = []
     for r in runs:
         end = offset + len(r.text)
@@ -136,7 +150,7 @@ def _style_requests(runs, offset):
         if fields:
             reqs.append({
                 "updateTextStyle": {
-                    "range": {"startIndex": offset, "endIndex": end},
+                    "range": _rng(offset, end, tab_id),
                     "textStyle": style,
                     "fields": ",".join(fields),
                 }
@@ -145,7 +159,7 @@ def _style_requests(runs, offset):
     return reqs
 
 
-def list_requests(blocks, index):
+def list_requests(blocks, index, tab_id=None):
     """Requests for a run of consecutive list_item blocks (same ordered-ness).
 
     The whole run gets ONE insertText and ONE createParagraphBullets: applying
@@ -157,17 +171,17 @@ def list_requests(blocks, index):
         runs = inline_runs(content_text(block).replace("\n", " "))
         prefix = "\t" * block.level
         texts.append(prefix + "".join(r.text for r in runs) + "\n")
-        style_reqs += _style_requests(runs, offset + len(prefix))
+        style_reqs += _style_requests(runs, offset + len(prefix), tab_id)
         offset += len(texts[-1])
     full = "".join(texts)
     preset = "NUMBERED_DECIMAL_ALPHA_ROMAN" if blocks[0].ordered else "BULLET_DISC_CIRCLE_SQUARE"
     return [
-        {"insertText": {"location": {"index": index}, "text": full}},
+        {"insertText": {**_loc(index, tab_id), "text": full}},
         *style_reqs,
         # Last: createParagraphBullets consumes the leading tabs, shifting
         # indices, so every index-addressed request must come before it.
         {"createParagraphBullets": {
-            "range": {"startIndex": index, "endIndex": index + len(full)},
+            "range": _rng(index, index + len(full), tab_id),
             "bulletPreset": preset,
         }},
     ]
@@ -189,25 +203,25 @@ def segment_blocks(blocks):
     return runs
 
 
-def run_requests(run, index):
+def run_requests(run, index, tab_id=None):
     """Requests for one segment_blocks() run."""
     if run[0].kind == "list_item":
-        return list_requests(run, index)
-    return block_requests(run[0], index)
+        return list_requests(run, index, tab_id)
+    return block_requests(run[0], index, tab_id)
 
 
-def block_requests(block, index):
+def block_requests(block, index, tab_id=None):
     if block.kind == "table":
-        return table_requests(block, index)
+        return table_requests(block, index, tab_id)
     if block.kind == "code":
-        return _code_requests(block, index)
+        return _code_requests(block, index, tab_id)
     if block.kind == "list_item":
-        return list_requests([block], index)
+        return list_requests([block], index, tab_id)
     runs = inline_runs(content_text(block).replace("\n", " "))
     text = "".join(r.text for r in runs) + "\n"
-    reqs = [{"insertText": {"location": {"index": index}, "text": text}}]
+    reqs = [{"insertText": {**_loc(index, tab_id), "text": text}}]
 
-    rng = {"startIndex": index, "endIndex": index + len(text)}
+    rng = _rng(index, index + len(text), tab_id)
     # Named paragraph styles must be applied BEFORE character styles: applying
     # a namedStyleType resets bold/italic/links on the range.
     if block.kind == "quote":
@@ -232,7 +246,7 @@ def block_requests(block, index):
             }
         })
 
-    return reqs + _style_requests(runs, index)
+    return reqs + _style_requests(runs, index, tab_id)
 
 
 def parse_table(source):
@@ -253,10 +267,10 @@ def _cell_index(index, r, c, cols):
     return index + 4 + r * (2 * cols + 1) + 2 * c
 
 
-def table_requests(block, index):
+def table_requests(block, index, tab_id=None):
     rows = parse_table(block.source)
     n_rows, n_cols = len(rows), len(rows[0])
-    reqs = [{"insertTable": {"location": {"index": index}, "rows": n_rows, "columns": n_cols}}]
+    reqs = [{"insertTable": {**_loc(index, tab_id), "rows": n_rows, "columns": n_cols}}]
     for r in range(n_rows - 1, -1, -1):           # reverse: highest index first
         for c in range(n_cols - 1, -1, -1):
             cell_md = rows[r][c]
@@ -265,6 +279,6 @@ def table_requests(block, index):
             runs = inline_runs(cell_md)
             text = "".join(x.text for x in runs)
             at = _cell_index(index, r, c, n_cols)
-            reqs.append({"insertText": {"location": {"index": at}, "text": text}})
-            reqs += _style_requests(runs, at)
+            reqs.append({"insertText": {**_loc(at, tab_id), "text": text}})
+            reqs += _style_requests(runs, at, tab_id)
     return reqs
