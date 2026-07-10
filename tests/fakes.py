@@ -25,3 +25,16 @@ class FakeApi:
 
     def create_doc(self, title, folder_id=None):
         return "fake-id", "https://docs.google.com/document/d/fake-id/edit"
+
+    @staticmethod
+    def doc_url(doc_id):
+        return f"https://docs.google.com/document/d/{doc_id}/edit"
+
+    def list_tabs(self, doc_id):
+        return []  # default: untabbed
+
+    def get_body_content(self, doc_id, tab_id=None):
+        return self.document["body"]["content"]
+
+    def export_tab_markdown(self, doc_id, tab_id):
+        return self.export_md

@@ -21,6 +21,11 @@ def main(argv=None):
     p_pull = sub.add_parser("pull", help="fetch comments and remote edits")
     p_pull.add_argument("file")
 
+    p_clone = sub.add_parser("clone", help="create a local file from an existing Google Doc")
+    p_clone.add_argument("url", metavar="URL_OR_ID", help="Google Doc URL or bare document ID")
+    p_clone.add_argument("file", nargs="?", metavar="FILE",
+                         help="output path (default: derived from document title)")
+
     p_status = sub.add_parser("status", help="check for remote changes and open comments")
     p_status.add_argument("file")
 
@@ -43,6 +48,21 @@ def main(argv=None):
             print(f"{res.state.capitalize()}: {res.url}")
             if res.orphaned:
                 print(f"Orphaned {len(res.orphaned)} comment anchor(s).")
+    elif args.command == "clone":
+        from .clone import clone
+
+        res = clone(args.url, args.file, api)
+        if isinstance(res, list):
+            for r in res:
+                print(f"Cloned to {r.path}")
+            first = res[0]
+            from . import binding as _binding
+            cf = _binding.comments_file(first.path.read_text(encoding="utf-8"))
+            comments_path = (first.path.parent / cf) if cf else (str(first.path) + ".comments.md")
+            print(f"{first.comment_count} comment(s) saved to {comments_path}")
+        else:
+            print(f"Cloned to {res.path}")
+            print(f"{res.comment_count} comment(s) saved to {res.path}.comments.md")
     elif args.command == "pull":
         from .pull import pull
 

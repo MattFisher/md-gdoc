@@ -16,15 +16,27 @@ def read(text: str) -> tuple[str | None, str | None, str]:
     )
 
 
+def tab_id(text: str) -> str | None:
+    return frontmatter.loads(text).metadata.get("tab_id")
+
+
+def comments_file(text: str) -> str | None:
+    return frontmatter.loads(text).metadata.get("comments_file")
+
+
 def _dump(post):
     out = frontmatter.dumps(post)
     return out if out.endswith("\n") else out + "\n"
 
 
-def bind(text: str, gdoc_id: str, gdoc_url: str) -> str:
+def bind(text: str, gdoc_id: str, gdoc_url: str, tab_id=None, comments_file=None) -> str:
     post = frontmatter.loads(text)
     post.metadata["gdoc_id"] = gdoc_id
     post.metadata["gdoc_url"] = gdoc_url
+    if tab_id is not None:
+        post.metadata["tab_id"] = tab_id
+    if comments_file is not None:
+        post.metadata["comments_file"] = comments_file
     return _dump(post)
 
 
