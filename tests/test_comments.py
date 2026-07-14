@@ -1,4 +1,4 @@
-from gdoc_sync.comments import CommentThread, Reply, from_api, render
+from md_gdoc.comments import CommentThread, Reply, from_api, render
 
 API_ITEMS = [
     {

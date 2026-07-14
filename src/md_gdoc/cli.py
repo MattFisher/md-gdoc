@@ -1,11 +1,11 @@
-"""gdoc-sync command line interface."""
+"""md-gdoc command line interface."""
 
 import argparse
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        prog="gdoc-sync",
+        prog="md-gdoc",
         description="Sync local markdown with Google Docs (push/pull/status).",
     )
     sub = parser.add_subparsers(dest="command", required=True)

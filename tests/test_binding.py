@@ -1,4 +1,4 @@
-from gdoc_sync import binding
+from md_gdoc import binding
 
 DOC = """---
 title: My doc
@@ -14,9 +14,9 @@ NO_FM = "# Hello\n\nBody text.\n"
 
 
 def test_package_imports():
-    import gdoc_sync
+    import md_gdoc
 
-    assert gdoc_sync.__version__
+    assert md_gdoc.__version__
 
 
 def test_read_bound_file():

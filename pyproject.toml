@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gdoc-sync"
+name = "md-gdoc"
 version = "0.1.0"
 description = "Sync local markdown files with Google Docs: push drafts, pull comments and edits, preserve comment anchors."
 requires-python = ">=3.10"
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-gdoc-sync = "gdoc_sync.cli:main"
+md-gdoc = "md_gdoc.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

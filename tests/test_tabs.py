@@ -2,10 +2,10 @@
 
 import pytest
 
-from gdoc_sync import binding, snapshot
-from gdoc_sync.api import _split_by_tabs
-from gdoc_sync.clone import clone, _tab_filename
-from gdoc_sync.pull import pull
+from md_gdoc import binding, snapshot
+from md_gdoc.api import _split_by_tabs
+from md_gdoc.clone import clone, _tab_filename
+from md_gdoc.pull import pull
 from tests.fakes import FakeApi
 
 TABS = [

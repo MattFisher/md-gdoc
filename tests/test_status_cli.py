@@ -1,5 +1,5 @@
-from gdoc_sync import snapshot
-from gdoc_sync.status import status
+from md_gdoc import snapshot
+from md_gdoc.status import status
 from tests.fakes import FakeApi
 
 BODY = "# T\n\nHello.\n"
@@ -31,7 +31,7 @@ def test_status_remote_changed_and_comments(tmp_path):
 def test_cli_help_needs_no_credentials(capsys):
     import pytest
 
-    from gdoc_sync.cli import main
+    from md_gdoc.cli import main
 
     with pytest.raises(SystemExit) as exc:
         main(["--help"])

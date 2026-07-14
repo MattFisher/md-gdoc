@@ -1,4 +1,4 @@
-from gdoc_sync.unescape import clean
+from md_gdoc.unescape import clean
 
 
 def test_strips_spurious_escapes():

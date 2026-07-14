@@ -1,7 +1,7 @@
 import pytest
 
-from gdoc_sync import binding, snapshot
-from gdoc_sync.push import push
+from md_gdoc import binding, snapshot
+from md_gdoc.push import push
 from tests.fakes import FakeApi
 
 BODY = "# T\n\nOne.\n\nTwo.\n"

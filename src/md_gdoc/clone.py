@@ -64,7 +64,7 @@ def clone(url_or_id: str, out_path: str | None, api) -> "CloneResult | list[Clon
         if out_path is not None:
             raise SystemExit(
                 "This document has multiple tabs. Pass a directory (or omit the argument) — "
-                "gdoc-sync will create one file per tab."
+                "md-gdoc will create one file per tab."
             )
         base_dir = out_dir or Path(".")
         base_dir.mkdir(parents=True, exist_ok=True)

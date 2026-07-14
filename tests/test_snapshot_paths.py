@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from gdoc_sync import snapshot
-from gdoc_sync.api import GDocsApi
+from md_gdoc import snapshot
+from md_gdoc.api import GDocsApi
 
 
 def test_snapshot_roundtrip(tmp_path):

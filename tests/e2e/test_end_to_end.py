@@ -1,14 +1,14 @@
 """End-to-end tests against the real Drive/Docs APIs.
 
-Opt-in only: requires RUN_GDOC_SYNC_E2E=1 and OAuth credentials
-(GDOC_SYNC_CREDENTIALS / GDOC_SYNC_TOKEN or the default config paths).
+Opt-in only: requires RUN_MD_GDOC_E2E=1 and OAuth credentials
+(MD_GDOC_CREDENTIALS / MD_GDOC_TOKEN or the default config paths).
 A plain `pytest` run skips everything here. Docs are created inside the
-Drive folder named by GDOC_SYNC_E2E_FOLDER (default "gdoc-sync-e2e") and
+Drive folder named by MD_GDOC_E2E_FOLDER (default "md-gdoc-e2e") and
 deleted in teardown.
 
 Regenerate the golden export after an intentional change:
 
-    RUN_GDOC_SYNC_E2E=1 python -m tests.e2e.test_end_to_end --generate
+    RUN_MD_GDOC_E2E=1 python -m tests.e2e.test_end_to_end --generate
 """
 
 import os
@@ -28,18 +28,18 @@ except ImportError:
 FIXTURES = Path(__file__).parent / "fixtures"
 SOURCE = FIXTURES / "full_features.md"
 EXPECTED = FIXTURES / "full_features.expected.md"
-FOLDER = os.environ.get("GDOC_SYNC_E2E_FOLDER", "gdoc-sync-e2e")
+FOLDER = os.environ.get("MD_GDOC_E2E_FOLDER", "md-gdoc-e2e")
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get("RUN_GDOC_SYNC_E2E") != "1",
-    reason="e2e disabled (set RUN_GDOC_SYNC_E2E=1)",
+    os.environ.get("RUN_MD_GDOC_E2E") != "1",
+    reason="e2e disabled (set RUN_MD_GDOC_E2E=1)",
 )
 
 
 @pytest.fixture(scope="module")
 def api():
-    from gdoc_sync.api import GDocsApi
-    from gdoc_sync.auth import get_credentials
+    from md_gdoc.api import GDocsApi
+    from md_gdoc.auth import get_credentials
 
     return GDocsApi(get_credentials())
 
@@ -54,14 +54,14 @@ def workdir(tmp_path):
 @pytest.fixture()
 def pushed(api, workdir):
     """Push the fixture, yield (md_path, doc_id), delete the doc after."""
-    from gdoc_sync import binding, snapshot
-    from gdoc_sync.mdblocks import parse_blocks
-    from gdoc_sync.push import _insert_blocks
-    from gdoc_sync.unescape import clean
+    from md_gdoc import binding, snapshot
+    from md_gdoc.mdblocks import parse_blocks
+    from md_gdoc.push import _insert_blocks
+    from md_gdoc.unescape import clean
 
     folder_id = api.find_or_create_folder(FOLDER)
     body = SOURCE.read_text()
-    doc_id, url = api.create_doc("gdoc-sync e2e", folder_id)
+    doc_id, url = api.create_doc("md-gdoc e2e", folder_id)
     _insert_blocks(doc_id, parse_blocks(body), api)
     workdir.write_text(binding.bind(workdir.read_text(), doc_id, url))
     snapshot.save(workdir, body)
@@ -73,7 +73,7 @@ def pushed(api, workdir):
 
 
 def test_round_trip_matches_golden(api, pushed):
-    from gdoc_sync.unescape import clean
+    from md_gdoc.unescape import clean
 
     _, doc_id = pushed
     exported = clean(api.export_markdown(doc_id))
@@ -82,7 +82,7 @@ def test_round_trip_matches_golden(api, pushed):
 
 
 def test_comment_retrieval(api, pushed):
-    from gdoc_sync.pull import pull
+    from md_gdoc.pull import pull
 
     md, doc_id = pushed
     api.create_comment(doc_id, "e2e comment body", quoted="Intro paragraph")
@@ -93,7 +93,7 @@ def test_comment_retrieval(api, pushed):
 
 
 def test_anchor_preservation_and_orphaning(api, pushed):
-    from gdoc_sync.push import push
+    from md_gdoc.push import push
 
     md, doc_id = pushed
     api.create_comment(doc_id, "anchored to closing", quoted="Closing paragraph.")
@@ -112,7 +112,7 @@ def test_anchor_preservation_and_orphaning(api, pushed):
 
 
 def test_divergence_guard(api, pushed):
-    from gdoc_sync.push import push
+    from md_gdoc.push import push
 
     md, doc_id = pushed
     api.batch_update(doc_id, [{
@@ -124,15 +124,15 @@ def test_divergence_guard(api, pushed):
 
 
 def _generate():
-    from gdoc_sync.api import GDocsApi
-    from gdoc_sync.auth import get_credentials
-    from gdoc_sync.mdblocks import parse_blocks
-    from gdoc_sync.push import _insert_blocks
-    from gdoc_sync.unescape import clean
+    from md_gdoc.api import GDocsApi
+    from md_gdoc.auth import get_credentials
+    from md_gdoc.mdblocks import parse_blocks
+    from md_gdoc.push import _insert_blocks
+    from md_gdoc.unescape import clean
 
     api = GDocsApi(get_credentials())
     folder_id = api.find_or_create_folder(FOLDER)
-    doc_id, _ = api.create_doc("gdoc-sync golden", folder_id)
+    doc_id, _ = api.create_doc("md-gdoc golden", folder_id)
     _insert_blocks(doc_id, parse_blocks(SOURCE.read_text()), api)
     try:
         EXPECTED.write_text(clean(api.export_markdown(doc_id)))

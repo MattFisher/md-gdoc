@@ -1,7 +1,7 @@
 import pytest
 
-from gdoc_sync.docmodel import AlignmentError, DocBlock, check_alignment, doc_blocks
-from gdoc_sync.mdblocks import parse_blocks
+from md_gdoc.docmodel import AlignmentError, DocBlock, check_alignment, doc_blocks
+from md_gdoc.mdblocks import parse_blocks
 
 
 def _para(start, end, text):

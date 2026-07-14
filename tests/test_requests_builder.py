@@ -1,5 +1,5 @@
-from gdoc_sync.requests_builder import Run, inline_runs, block_requests, content_text, parse_table, table_requests
-from gdoc_sync.mdblocks import Block
+from md_gdoc.requests_builder import Run, inline_runs, block_requests, content_text, parse_table, table_requests
+from md_gdoc.mdblocks import Block
 
 
 def test_plain_text():
@@ -36,7 +36,7 @@ def test_code_inline_styled_without_backticks():
 
 
 def test_code_run_style_requests():
-    from gdoc_sync.requests_builder import _style_requests
+    from md_gdoc.requests_builder import _style_requests
 
     reqs = _style_requests(inline_runs("run `pytest` now"), 10)
     assert len(reqs) == 1
@@ -92,7 +92,7 @@ def test_list_item_requests_nested():
 
 
 def test_list_run_groups_into_single_insert():
-    from gdoc_sync.requests_builder import list_requests, segment_blocks
+    from md_gdoc.requests_builder import list_requests, segment_blocks
 
     blocks = [
         Block("list_item", "- a", level=0),
@@ -112,7 +112,7 @@ def test_list_run_groups_into_single_insert():
 
 
 def test_segment_blocks_splits_on_ordered_change():
-    from gdoc_sync.requests_builder import segment_blocks
+    from md_gdoc.requests_builder import segment_blocks
 
     blocks = [
         Block("list_item", "- a"),

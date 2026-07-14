@@ -9,15 +9,15 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
-_CONFIG = Path.home() / ".config" / "gdoc-sync"
+_CONFIG = Path.home() / ".config" / "md-gdoc"
 
 
 def _credentials_path():
-    return Path(os.environ.get("GDOC_SYNC_CREDENTIALS", _CONFIG / "credentials.json"))
+    return Path(os.environ.get("MD_GDOC_CREDENTIALS", _CONFIG / "credentials.json"))
 
 
 def _token_path():
-    return Path(os.environ.get("GDOC_SYNC_TOKEN", _CONFIG / "token.json"))
+    return Path(os.environ.get("MD_GDOC_TOKEN", _CONFIG / "token.json"))
 
 
 def get_credentials():
@@ -36,7 +36,7 @@ def get_credentials():
             raise SystemExit(
                 f"No OAuth client secrets at {cred_path}. Create a Google Cloud "
                 "OAuth desktop client and save its JSON there (or set "
-                "GDOC_SYNC_CREDENTIALS)."
+                "MD_GDOC_CREDENTIALS)."
             )
         flow = InstalledAppFlow.from_client_secrets_file(str(cred_path), SCOPES)
         creds = flow.run_local_server(port=0)

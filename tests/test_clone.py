@@ -1,7 +1,7 @@
 import pytest
 
-from gdoc_sync import binding, snapshot
-from gdoc_sync.clone import clone, _extract_doc_id, _title_to_filename
+from md_gdoc import binding, snapshot
+from md_gdoc.clone import clone, _extract_doc_id, _title_to_filename
 from tests.fakes import FakeApi
 
 BODY = "# Hello\n\nWorld.\n"
@@ -86,7 +86,7 @@ def test_clone_accepts_full_url(tmp_path):
 
 def test_clone_pull_is_clean_after(tmp_path):
     """After clone, pull should report clean with no snapshot update needed."""
-    from gdoc_sync.pull import pull
+    from md_gdoc.pull import pull
 
     clone("fake-id", str(tmp_path / "out.md"), _api())
     res = pull(tmp_path / "out.md", _api())
