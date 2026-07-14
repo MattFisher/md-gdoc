@@ -175,13 +175,20 @@ def list_requests(blocks, index, tab_id=None):
         offset += len(texts[-1])
     full = "".join(texts)
     preset = "NUMBERED_DECIMAL_ALPHA_ROMAN" if blocks[0].ordered else "BULLET_DISC_CIRCLE_SQUARE"
+    run_rng = _rng(index, index + len(full), tab_id)
     return [
         {"insertText": {**_loc(index, tab_id), "text": full}},
+        # Reset any inherited heading style before applying bullets.
+        {"updateParagraphStyle": {
+            "range": run_rng,
+            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+            "fields": "namedStyleType",
+        }},
         *style_reqs,
         # Last: createParagraphBullets consumes the leading tabs, shifting
         # indices, so every index-addressed request must come before it.
         {"createParagraphBullets": {
-            "range": _rng(index, index + len(full), tab_id),
+            "range": run_rng,
             "bulletPreset": preset,
         }},
     ]
