@@ -85,9 +85,9 @@ def content_text(block):
     if block.kind == "list_item":
         lines = block.source.split("\n")
         head = _MARKER["list_item"].sub("", lines[0])
-        return " ".join([head] + [l.strip() for l in lines[1:]])
+        return " ".join([head] + [line.strip() for line in lines[1:]])
     if block.kind == "quote":
-        return "\n".join(_re.sub(r"^\s*>\s?", "", l) for l in block.source.split("\n"))
+        return "\n".join(_re.sub(r"^\s*>\s?", "", line) for line in block.source.split("\n"))
     return block.source
 
 

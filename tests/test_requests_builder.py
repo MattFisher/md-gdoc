@@ -1,5 +1,12 @@
-from md_gdoc.requests_builder import Run, inline_runs, block_requests, content_text, parse_table, table_requests
 from md_gdoc.mdblocks import Block
+from md_gdoc.requests_builder import (
+    Run,
+    block_requests,
+    content_text,
+    inline_runs,
+    parse_table,
+    table_requests,
+)
 
 
 def test_plain_text():

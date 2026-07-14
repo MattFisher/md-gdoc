@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import binding, snapshot
+from . import snapshot
 from .api import _split_by_tabs
 from .comments import from_api, render
 from .pull import _fmt

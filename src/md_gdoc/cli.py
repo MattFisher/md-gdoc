@@ -2,12 +2,15 @@
 
 import argparse
 
+from . import __version__
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="md-gdoc",
         description="Sync local markdown with Google Docs (push/pull/status).",
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_push = sub.add_parser("push", help="create or update the Google Doc from the file")
@@ -31,11 +34,36 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
 
+    import google.auth.exceptions
+    from googleapiclient.errors import HttpError
+
     from .api import GDocsApi
     from .auth import get_credentials
 
-    api = GDocsApi(get_credentials())
+    try:
+        return _run(args, GDocsApi(get_credentials()))
+    except HttpError as e:
+        status = e.resp.status
+        if status == 404:
+            raise SystemExit(
+                "Google Doc not found — it may have been deleted, or this "
+                "account has no access to it."
+            ) from e
+        if status == 403:
+            raise SystemExit(
+                "Permission denied by Google. Check that the Docs and Drive APIs "
+                "are enabled for your OAuth client and that this account can "
+                "edit the document."
+            ) from e
+        raise SystemExit(f"Google API error ({status}): {e.reason}") from e
+    except google.auth.exceptions.GoogleAuthError as e:
+        raise SystemExit(
+            f"Authentication failed: {e}. Delete the cached token "
+            "(~/.config/md-gdoc/token.json) to re-authenticate."
+        ) from e
 
+
+def _run(args, api):
     if args.command == "push":
         from .push import push
 
@@ -82,6 +110,4 @@ def main(argv=None):
         print(res.url)
         print(f"Remote changes: {'yes' if res.remote_changed else 'no'}")
         print(f"Open comments: {res.open_comments}")
-    else:
-        parser.error(f"unknown command {args.command!r}")
     return 0

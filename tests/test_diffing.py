@@ -1,4 +1,4 @@
-from md_gdoc.diffing import BlockOp, diff_blocks
+from md_gdoc.diffing import diff_blocks
 from md_gdoc.mdblocks import parse_blocks
 
 BASE = parse_blocks("# T\n\nPara one.\n\nPara two.\n\nPara three.\n")

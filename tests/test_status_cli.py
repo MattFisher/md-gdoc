@@ -37,3 +37,30 @@ def test_cli_help_needs_no_credentials(capsys):
         main(["--help"])
     assert exc.value.code == 0
     assert "push" in capsys.readouterr().out
+
+
+def test_cli_version(capsys):
+    import pytest
+
+    from md_gdoc import __version__
+    from md_gdoc.cli import main
+
+    with pytest.raises(SystemExit) as exc:
+        main(["--version"])
+    assert exc.value.code == 0
+    assert __version__ in capsys.readouterr().out
+
+
+def test_cli_friendly_message_on_api_404(monkeypatch):
+    import httplib2
+    import pytest
+    from googleapiclient.errors import HttpError
+
+    from md_gdoc.cli import main
+
+    def raise_404():
+        raise HttpError(httplib2.Response({"status": 404, "reason": "Not Found"}), b"")
+
+    monkeypatch.setattr("md_gdoc.auth.get_credentials", raise_404)
+    with pytest.raises(SystemExit, match="not found"):
+        main(["status", "whatever.md"])

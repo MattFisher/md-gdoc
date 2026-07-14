@@ -1,11 +1,30 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "md-gdoc"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Sync local markdown files with Google Docs: push drafts, pull comments and edits, preserve comment anchors."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Matt Fisher", email = "m@ttfisher.com" }]
+keywords = ["markdown", "google-docs", "google-drive", "sync", "comments", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Text Processing :: Markup :: Markdown",
+    "Topic :: Communications :: File Sharing",
+]
 requires-python = ">=3.10"
 dependencies = [
     "google-api-python-client>=2.100",
@@ -15,8 +34,17 @@ dependencies = [
     "python-frontmatter>=1.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/MattFisher/md-gdoc"
+Repository = "https://github.com/MattFisher/md-gdoc"
+Issues = "https://github.com/MattFisher/md-gdoc/issues"
+Changelog = "https://github.com/MattFisher/md-gdoc/blob/main/CHANGELOG.md"
+
 [project.scripts]
 md-gdoc = "md_gdoc.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "md_gdoc.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -25,7 +53,15 @@ where = ["src"]
 dev-dependencies = [
     "pytest>=8",
     "python-dotenv>=1.0",
+    "ruff>=0.8",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP"]

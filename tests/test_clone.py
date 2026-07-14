@@ -1,7 +1,7 @@
 import pytest
 
 from md_gdoc import binding, snapshot
-from md_gdoc.clone import clone, _extract_doc_id, _title_to_filename
+from md_gdoc.clone import _extract_doc_id, _title_to_filename, clone
 from tests.fakes import FakeApi
 
 BODY = "# Hello\n\nWorld.\n"
@@ -79,7 +79,7 @@ def test_clone_refuses_to_overwrite(tmp_path):
 
 def test_clone_accepts_full_url(tmp_path):
     url = "https://docs.google.com/document/d/fake-id/edit"
-    res = clone(url, str(tmp_path / "out.md"), _api())
+    clone(url, str(tmp_path / "out.md"), _api())
     _, _, body = binding.read((tmp_path / "out.md").read_text())
     assert "Hello" in body
 

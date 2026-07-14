@@ -42,19 +42,19 @@ def parse_blocks(md):
             j = i
             while j < n and lines[j].lstrip().startswith(">"):
                 j += 1
-            blocks.append(Block("quote", "\n".join(l.rstrip() for l in lines[i:j])))
+            blocks.append(Block("quote", "\n".join(line.rstrip() for line in lines[i:j])))
             i = j
         elif "|" in line and i + 1 < n and _TABLE_SEP.match(lines[i + 1]):
             j = i
             while j < n and lines[j].strip() and "|" in lines[j]:
                 j += 1
-            blocks.append(Block("table", "\n".join(l.rstrip() for l in lines[i:j])))
+            blocks.append(Block("table", "\n".join(line.rstrip() for line in lines[i:j])))
             i = j
         else:                                        # paragraph (or footnote def / image)
             j = i
             while j < n and lines[j].strip() and not _is_block_start(lines, j):
                 j += 1
-            source = "\n".join(l.rstrip() for l in lines[i:j])
+            source = "\n".join(line.rstrip() for line in lines[i:j])
             blocks.append(Block(_paragraph_kind(source), source))
             i = j
     return blocks

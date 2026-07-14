@@ -136,7 +136,7 @@ def test_table_with_sibling_insert_aborts(tmp_path):
     """Inserting a table alongside another block in one op must abort with --replace hint."""
     # Base: single paragraph (no heading, just one block)
     base_body = "Intro.\n"
-    base_bound = f"---\ngdoc_id: d1\ngdoc_url: u\n---\n{base_body}"
+
     base_doc = _doc(["Intro."])
     # New: the original paragraph is untouched, but we insert a table AND a new paragraph
     # after it — but because the base only had one block and new has three, the diff will

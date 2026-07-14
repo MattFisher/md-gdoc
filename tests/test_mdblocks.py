@@ -1,4 +1,4 @@
-from md_gdoc.mdblocks import Block, parse_blocks, unsupported
+from md_gdoc.mdblocks import parse_blocks, unsupported
 
 MD = """# Title
 

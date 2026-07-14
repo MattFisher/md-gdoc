@@ -1,6 +1,6 @@
 import pytest
 
-from md_gdoc.docmodel import AlignmentError, DocBlock, check_alignment, doc_blocks
+from md_gdoc.docmodel import AlignmentError, check_alignment, doc_blocks
 from md_gdoc.mdblocks import parse_blocks
 
 

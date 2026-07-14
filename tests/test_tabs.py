@@ -4,7 +4,7 @@ import pytest
 
 from md_gdoc import binding, snapshot
 from md_gdoc.api import _split_by_tabs
-from md_gdoc.clone import clone, _tab_filename
+from md_gdoc.clone import _tab_filename, clone
 from md_gdoc.pull import pull
 from tests.fakes import FakeApi
 
@@ -188,7 +188,7 @@ def test_clone_tabbed_saves_snapshots(tmp_path, monkeypatch):
 
 def test_clone_tabbed_writes_shared_comments_file(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    results = clone("fake-id", None, _TabbedApi(title="My Doc"))
+    clone("fake-id", None, _TabbedApi(title="My Doc"))
     # One shared comments file, not one per tab
     comments_files = list(tmp_path.glob("*.comments.md"))
     assert len(comments_files) == 1

@@ -59,7 +59,7 @@ def render(threads, source_name):
         lines.append(f"## [{state}] {t.id} — {t.author} ({t.created})")
         lines.append("")
         if t.quoted:
-            lines += [f"> {l}" for l in t.quoted.splitlines()]
+            lines += [f"> {line}" for line in t.quoted.splitlines()]
             lines.append("")
         lines += [t.content, ""]
         for r in t.replies:
