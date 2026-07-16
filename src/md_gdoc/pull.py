@@ -55,6 +55,14 @@ def pull(md_path, api):
         if base is None or base_remote is None:
             snapshot.save(md_path, remote_body)
             snapshot.save_remote(md_path, remote_body)
+            base = remote_body
+        # Migrate data URIs left in the local file by pulls that predate
+        # image extraction. The base snapshot moves with the file so the
+        # rewrite doesn't read as a local edit on the next push/pull.
+        migrated = extract_images(text, md_path)
+        if migrated != text:
+            md_path.write_text(migrated, encoding="utf-8")
+            snapshot.save(md_path, extract_images(base, md_path))
         return PullResult("clean", len(threads))
 
     # Local-unchanged check: compare current local body against local snapshot.

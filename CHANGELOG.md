@@ -21,8 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   by content hash so repeated pulls are stable and duplicates are stored
   once, and referenced with relative links. The raw export (with data
   URIs) is still what's stored in the `.sync/` remote snapshot, so change
-  detection is unaffected. Pushing images into a doc remains unsupported
-  (#3).
+  detection is unaffected. A pull with no remote changes also migrates
+  data URIs left in local files by earlier versions. Pushing images into
+  a doc remains unsupported (#3).
 
 ## [0.1.0] - 2026-07-14
 

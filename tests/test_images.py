@@ -98,6 +98,28 @@ def test_pull_extracts_images_into_local_file_and_base(tmp_path):
     assert "base64," in snapshot.load_remote(md)
 
 
+def test_clean_pull_migrates_data_uris_already_in_local_file(tmp_path):
+    # Files pulled before extraction existed still carry data URIs; a pull
+    # with no remote changes should extract them rather than leave them.
+    md = tmp_path / "draft.md"
+    body_with_uri = f"Hello.\n\n![][image1]\n\n[image1]: <data:image/png;base64,{PNG_B64}>\n"
+    md.write_text(f"---\ngdoc_id: d1\ngdoc_url: u\n---\n{body_with_uri}")
+    snapshot.save(md, body_with_uri)
+    snapshot.save_remote(md, body_with_uri)
+
+    res = pull(md, FakeApi(export_md=body_with_uri))
+
+    assert res.state == "clean"
+    text = md.read_text()
+    assert "base64" not in text
+    assert "draft.assets/" in text
+    assert text.startswith("---\ngdoc_id: d1\n")            # frontmatter intact
+    # The base snapshot moves with the file, so this isn't a phantom local edit:
+    # a second pull is still clean.
+    assert "base64" not in snapshot.load(md)
+    assert pull(md, FakeApi(export_md=body_with_uri)).state == "clean"
+
+
 def test_pull_conflict_writes_extracted_remote_copy(tmp_path):
     md = tmp_path / "draft.md"
     md.write_text("---\ngdoc_id: d1\ngdoc_url: u\n---\nHello local edit.\n")
