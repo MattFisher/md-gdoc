@@ -5,13 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Fixed
-
-- `push` crashed with an IndexError (or refused tables) when the bound doc
-  was empty — e.g. after cloning a blank doc and then writing content
-  locally. An empty doc is now populated via the first-push insertion path.
+## [0.2.0] - 2026-07-16
 
 ### Added
 
@@ -24,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   detection is unaffected. A pull with no remote changes also migrates
   data URIs left in local files by earlier versions. Pushing images into
   a doc remains unsupported (#3).
+
+### Fixed
+
+- `push` crashed with an IndexError (or refused tables) when the bound doc
+  was empty — e.g. after cloning a blank doc and then writing content
+  locally. An empty doc is now populated via the first-push insertion path.
 
 ## [0.1.0] - 2026-07-14
 
@@ -50,5 +50,5 @@ First public release (alpha). Previously developed as `gdoc-sync`.
 - OAuth installed-app flow with cached token (`~/.config/md-gdoc/`),
   exponential backoff on Docs API rate limits.
 
-[Unreleased]: https://github.com/MattFisher/md-gdoc/compare/v0.1.0...HEAD
+[0.2.0]: https://github.com/MattFisher/md-gdoc/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/MattFisher/md-gdoc/releases/tag/v0.1.0
