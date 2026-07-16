@@ -119,6 +119,12 @@ a shared comments file.
 - **Content is built with the Docs API** (`batchUpdate`), not Drive's
   markdown import, which mangles code blocks. Code blocks round-trip
   byte-perfectly, including the language tag.
+- **Images come out of the doc as files.** Google's export embeds images as
+  base64 data URIs; `pull` and `clone` extract them into `<name>.assets/`
+  next to the file (named by content hash, so pulls are stable) and link
+  them relatively. Pushing images back into a doc isn't supported — the
+  Docs API only accepts publicly-accessible image URLs
+  ([#3](https://github.com/MattFisher/md-gdoc/issues/3)).
 
 Add to the `.gitignore` of repos where you use md-gdoc:
 
@@ -139,7 +145,8 @@ Add to the `.gitignore` of repos where you use md-gdoc:
 | Lists (nested, ordered) | ✅ | ✅ |
 | Block quotes | ✅ | ✅ |
 | Tables | ✅ | ✅ |
-| Images, footnotes | ⚠️ `--replace` only | ❌ |
+| Images | ❌ dropped on push | ⬇️ pull-only: saved to `<name>.assets/` |
+| Footnotes | ⚠️ `--replace` only | ❌ |
 
 ### Known limitations (alpha)
 

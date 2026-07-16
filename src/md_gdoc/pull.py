@@ -7,6 +7,7 @@ import mdformat
 
 from . import binding, snapshot
 from .comments import from_api, render
+from .images import extract_images
 from .unescape import clean
 
 
@@ -58,12 +59,13 @@ def pull(md_path, api):
 
     # Local-unchanged check: compare current local body against local snapshot.
     if base is not None and local_clean == clean(base):
-        body_out = _fmt(remote_body)
+        body_out = _fmt(extract_images(remote_body, md_path))
         md_path.write_text(binding.replace_body(text, body_out), encoding="utf-8")
         snapshot.save(md_path, body_out)
         snapshot.save_remote(md_path, remote_body)
         return PullResult("updated", len(threads))
 
     remote_path = md_path.parent / (md_path.name + ".remote.md")
-    remote_path.write_text(_fmt(remote_body), encoding="utf-8")
+    # Assets are keyed to md_path, so the conflict copy shares the same files.
+    remote_path.write_text(_fmt(extract_images(remote_body, md_path)), encoding="utf-8")
     return PullResult("conflict", len(threads), remote_path)

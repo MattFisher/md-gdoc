@@ -7,6 +7,7 @@ from pathlib import Path
 from . import snapshot
 from .api import _split_by_tabs
 from .comments import from_api, render
+from .images import extract_images
 from .pull import _fmt
 from .unescape import clean
 
@@ -80,11 +81,11 @@ def clone(url_or_id: str, out_path: str | None, api) -> "CloneResult | list[Clon
         shared_comments_path.write_text(render(threads, first_fname), encoding="utf-8")
         for tab in tabs:
             tab_body = clean(split.get(tab["id"], "\n"))
-            body = _fmt(tab_body)
             fname = _tab_filename(doc_title=title, tab_title=tab["title"])
             md_path = base_dir / fname
             if md_path.exists():
                 raise SystemExit(f"{md_path} already exists.")
+            body = _fmt(extract_images(tab_body, md_path))
             text = (
                 f"---\ngdoc_id: {doc_id}\ngdoc_url: {url}\n"
                 f"tab_id: {tab['id']}\ncomments_file: {shared_comments_name}\n---\n{body}"
@@ -98,7 +99,6 @@ def clone(url_or_id: str, out_path: str | None, api) -> "CloneResult | list[Clon
     # Single file: existing behavior
     remote_raw = api.export_markdown(doc_id)
     remote_body = clean(remote_raw)
-    body = _fmt(remote_body)
 
     threads = from_api(api.list_comments(doc_id))
 
@@ -108,6 +108,8 @@ def clone(url_or_id: str, out_path: str | None, api) -> "CloneResult | list[Clon
         out_dir.mkdir(parents=True, exist_ok=True)
     if md_path.exists():
         raise SystemExit(f"{md_path} already exists — remove it first or pass a different path.")
+
+    body = _fmt(extract_images(remote_body, md_path))
 
     text = f"---\ngdoc_id: {doc_id}\ngdoc_url: {url}\n---\n{body}"
     md_path.write_text(text, encoding="utf-8")
