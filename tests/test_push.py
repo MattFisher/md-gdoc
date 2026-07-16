@@ -49,6 +49,30 @@ def test_noop_when_unchanged(tmp_path):
     assert res.state == "noop"
 
 
+def test_revision_push_into_empty_doc_inserts_at_start(tmp_path):
+    # Cloned-from-empty-doc state: empty base snapshot, blank remote doc,
+    # content written locally since. The pure-insert path must not assume
+    # the doc has any diffable blocks.
+    local = "---\ngdoc_id: d1\ngdoc_url: u\n---\nHello.\n"
+    md = _setup(tmp_path, local, snap="")
+    api = FakeApi(export_md="", document=_doc([""]), export_md_after_update="Hello.\n")
+    res = push(md, api, yes=True)
+    assert res.state == "pushed"
+    assert api.batch_updates[0][0]["insertText"]["location"]["index"] == 1
+
+
+def test_revision_push_into_empty_doc_handles_tables(tmp_path):
+    # Populating an empty doc must take the first-push insertion path, which
+    # supports tables — not the diff path, which refuses them among siblings.
+    body = "Intro.\n\n| A | B |\n| - | - |\n| 1 | 2 |\n\nOutro.\n"
+    local = f"---\ngdoc_id: d1\ngdoc_url: u\n---\n{body}"
+    md = _setup(tmp_path, local, snap="")
+    api = FakeApi(export_md="", document=_doc([""]), export_md_after_update=body)
+    res = push(md, api, yes=True)
+    assert res.state == "pushed"
+    assert snapshot.load(md) == body
+
+
 def test_revision_push_targets_changed_block(tmp_path):
     local = BOUND.replace("Two.", "Two edited.")
     local_body = binding.read(local)[2]

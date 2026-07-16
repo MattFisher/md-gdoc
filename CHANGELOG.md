@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `push` crashed with an IndexError (or refused tables) when the bound doc
+  was empty — e.g. after cloning a blank doc and then writing content
+  locally. An empty doc is now populated via the first-push insertion path.
+
 ### Added
 
 - `pull` and `clone` extract images from the doc into files instead of

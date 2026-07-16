@@ -89,6 +89,15 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
     except AlignmentError as e:
         raise SystemExit(f"Doc/snapshot mismatch: {e.detail}") from e
 
+    if not doc:
+        # Blank doc (e.g. cloned before any content existed): populate it the
+        # way a first push does — the diff path assumes at least one block.
+        _insert_blocks(doc_id, new_blocks, api, tab_id)
+        remote = clean(api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id))
+        snapshot.save(md_path, body)
+        snapshot.save_remote(md_path, remote)
+        return PushResult("pushed", url)
+
     orphaned = _orphaned_comments(api.list_comments(doc_id), ops, base_blocks)
     if orphaned and not yes:
         answer = confirm(
