@@ -34,14 +34,18 @@ def pull(md_path, api):
     doc_id, _, local_body = binding.read(text)
     tab_id = binding.tab_id(text)
     if not doc_id:
-        raise SystemExit(
-            f"{md_path} has no gdoc_id in frontmatter — push it first."
-        )
+        raise SystemExit(f"{md_path} has no gdoc_id in frontmatter — push it first.")
 
-    remote_body = clean(api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id))
+    remote_body = clean(
+        api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id)
+    )
     threads = from_api(api.list_comments(doc_id))
     shared_cf = binding.comments_file(text)
-    comments_path = (md_path.parent / shared_cf) if shared_cf else (md_path.parent / (md_path.name + ".comments.md"))
+    comments_path = (
+        (md_path.parent / shared_cf)
+        if shared_cf
+        else (md_path.parent / (md_path.name + ".comments.md"))
+    )
     comments_path.write_text(render(threads, md_path.name), encoding="utf-8")
 
     base = snapshot.load(md_path)
@@ -50,7 +54,11 @@ def pull(md_path, api):
 
     # Remote-changed check: compare fresh export against what Google had at last push.
     # Fall back to local snapshot (old behaviour) when remote snapshot absent.
-    expected_remote = base_remote if base_remote is not None else (clean(base) if base is not None else local_clean)
+    expected_remote = (
+        base_remote
+        if base_remote is not None
+        else (clean(base) if base is not None else local_clean)
+    )
     if remote_body == expected_remote:
         if base is None or base_remote is None:
             snapshot.save(md_path, remote_body)

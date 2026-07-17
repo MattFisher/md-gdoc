@@ -2,11 +2,22 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  # md-gdoc is published and claims 3.10-3.14 support, so unlike the other
+  # repos it matrixes the shared workflow across every supported version
+  # (plus one macOS run) rather than calling it once.
+  ci:
     strategy:
       fail-fast: false
       matrix:
@@ -15,12 +26,7 @@ jobs:
         include:
           - os: macos-latest
             python: "3.13"
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          python-version: ${{ matrix.python }}
-      - run: uv sync --frozen
-      - run: uv run ruff check .
-      - run: uv run pytest -q
+    uses: MattFisher/python-project-template/.github/workflows/python-ci.yml@v1
+    with:
+      python-version: ${{ matrix.python }}
+      runs-on: ${{ matrix.os }}

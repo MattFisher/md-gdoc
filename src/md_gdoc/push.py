@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from . import binding, snapshot
 from .diffing import diff_blocks
@@ -15,7 +16,7 @@ from .unescape import clean
 class PushResult:
     state: str
     url: str = ""
-    orphaned: list = field(default_factory=list)
+    orphaned: list[Any] = field(default_factory=list)
 
 
 def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
@@ -32,38 +33,40 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
         remote = clean(api.export_markdown(doc_id))
         snapshot.save(md_path, body)
         snapshot.save_remote(md_path, remote)
-        return PushResult("created", url)
+        return PushResult("created", url or "")
 
     if replace:
         if not yes and confirm(
-            "--replace rewrites the whole doc and orphans ALL comment "
-            "anchors. Continue? [y/N] "
+            "--replace rewrites the whole doc and orphans ALL comment anchors. Continue? [y/N] "
         ).strip().lower() not in ("y", "yes"):
             raise SystemExit("aborted")
         _clear_doc(doc_id, api, tab_id)
         _insert_blocks(doc_id, parse_blocks(body), api, tab_id)
-        remote = clean(api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id))
+        remote = clean(
+            api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id)
+        )
         snapshot.save(md_path, body)
         snapshot.save_remote(md_path, remote)
-        return PushResult("replaced", url)
+        return PushResult("replaced", url or "")
 
     base = snapshot.load(md_path)
     if base is None:
         raise SystemExit(
-            f"No snapshot for {md_path.name} (fresh clone?). Run pull first, "
-            "or push --replace."
+            f"No snapshot for {md_path.name} (fresh clone?). Run pull first, or push --replace."
         )
 
     base_remote = snapshot.load_remote(md_path)
     expected_remote = base_remote if base_remote is not None else clean(base)
-    current_remote = clean(api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id))
+    current_remote = clean(
+        api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id)
+    )
     if current_remote != expected_remote and not force:
         raise SystemExit("remote has changes — run pull first (or --force)")
 
     base_blocks, new_blocks = parse_blocks(base), parse_blocks(body)
     ops = diff_blocks(base_blocks, new_blocks)
     if all(o.op == "equal" for o in ops):
-        return PushResult("noop", url)
+        return PushResult("noop", url or "")
 
     touched = [
         b
@@ -75,8 +78,7 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
     if touched:
         names = "; ".join(unsupported(touched))
         raise SystemExit(
-            f"Changed blocks the diff path can't handle ({names}). "
-            "Use push --replace."
+            f"Changed blocks the diff path can't handle ({names}). Use push --replace."
         )
 
     if tab_id:
@@ -93,16 +95,16 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
         # Blank doc (e.g. cloned before any content existed): populate it the
         # way a first push does — the diff path assumes at least one block.
         _insert_blocks(doc_id, new_blocks, api, tab_id)
-        remote = clean(api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id))
+        remote = clean(
+            api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id)
+        )
         snapshot.save(md_path, body)
         snapshot.save_remote(md_path, remote)
-        return PushResult("pushed", url)
+        return PushResult("pushed", url or "")
 
     orphaned = _orphaned_comments(api.list_comments(doc_id), ops, base_blocks)
     if orphaned and not yes:
-        answer = confirm(
-            f"This push will orphan {len(orphaned)} comment(s). Continue? [y/N] "
-        )
+        answer = confirm(f"This push will orphan {len(orphaned)} comment(s). Continue? [y/N] ")
         if answer.strip().lower() not in ("y", "yes"):
             raise SystemExit("aborted")
 
@@ -110,7 +112,7 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
     for op in reversed(ops):
         if op.op == "equal":
             continue
-        if op.old[0] < op.old[1]:                    # delete or replace: remove old range
+        if op.old[0] < op.old[1]:  # delete or replace: remove old range
             start = doc[op.old[0]].start
             end = doc[op.old[1] - 1].end
             # NOTE: if op.old[1] == len(doc), the range covers the final paragraph which
@@ -121,7 +123,7 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
             if tab_id:
                 rng["tabId"] = tab_id
             requests.append({"deleteContentRange": {"range": rng}})
-        else:                                        # pure insert
+        else:  # pure insert
             i = op.old[0]
             insert_at = doc[i].start if i < len(doc) else doc[-1].end
         new_range = new_blocks[op.new[0] : op.new[1]]
@@ -137,15 +139,18 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
             requests += run_requests(run, insert_at, tab_id)
 
     api.batch_update(doc_id, requests)
-    remote = clean(api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id))
+    remote = clean(
+        api.export_tab_markdown(doc_id, tab_id) if tab_id else api.export_markdown(doc_id)
+    )
     snapshot.save(md_path, body)
     snapshot.save_remote(md_path, remote)
-    return PushResult("pushed", url, orphaned)
+    return PushResult("pushed", url or "", orphaned)
 
 
 def _insert_blocks(doc_id, blocks, api, tab_id=None):
-    """Populate a blank doc with blocks, inserting one run per batchUpdate
-    (consecutive list items form one run so their nesting survives).
+    r"""Populate a blank doc with blocks, one run per batchUpdate.
+
+    Consecutive list items form one run so their nesting survives.
 
     Before each insertion, fetches the document to find the startIndex of the
     trailing empty paragraph (the blank doc's original \\n). Pre-computing
@@ -166,9 +171,7 @@ def _clear_doc(doc_id, api, tab_id=None):
         rng = {"startIndex": 1, "endIndex": end - 1}
         if tab_id:
             rng["tabId"] = tab_id
-        api.batch_update(doc_id, [
-            {"deleteContentRange": {"range": rng}}
-        ])
+        api.batch_update(doc_id, [{"deleteContentRange": {"range": rng}}])
 
 
 def _trailing_para_index(content):
@@ -181,7 +184,9 @@ def _trailing_para_index(content):
 
 def _orphaned_comments(comment_items, ops, base_blocks):
     changed_text = "\n\n".join(
-        b.source for o in ops if o.op in ("replace", "delete")
+        b.source
+        for o in ops
+        if o.op in ("replace", "delete")
         for b in base_blocks[o.old[0] : o.old[1]]
     )
     out = []

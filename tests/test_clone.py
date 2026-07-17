@@ -15,6 +15,7 @@ def _api(body=BODY, title="My Doc", comments=None):
 
 # --- unit helpers ---
 
+
 def test_extract_doc_id_from_url():
     url = "https://docs.google.com/document/d/abc123XYZ/edit"
     assert _extract_doc_id(url) == "abc123XYZ"
@@ -36,6 +37,7 @@ def test_title_to_filename():
 
 
 # --- clone behaviour ---
+
 
 def test_clone_creates_file(tmp_path):
     res = clone("fake-id", str(tmp_path / "out.md"), _api())

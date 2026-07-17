@@ -27,14 +27,14 @@ def parse_blocks(md):
             i += 1
             continue
         line = lines[i]
-        if _FENCE.match(line):                      # fenced code: scan to closing fence
+        if _FENCE.match(line):  # fenced code: scan to closing fence
             j = i + 1
             while j < n and not _FENCE.match(lines[j]):
                 j += 1
             blocks.append(Block("code", "\n".join(lines[i : min(j + 1, n)])))
             i = j + 1
-        elif _HEADING.match(line):
-            blocks.append(Block("heading", line.rstrip(), level=len(_HEADING.match(line).group(1))))
+        elif heading := _HEADING.match(line):
+            blocks.append(Block("heading", line.rstrip(), level=len(heading.group(1))))
             i += 1
         elif _LIST.match(line):
             i = _consume_list(lines, i, blocks)
@@ -50,7 +50,7 @@ def parse_blocks(md):
                 j += 1
             blocks.append(Block("table", "\n".join(line.rstrip() for line in lines[i:j])))
             i = j
-        else:                                        # paragraph (or footnote def / image)
+        else:  # paragraph (or footnote def / image)
             j = i
             while j < n and lines[j].strip() and not _is_block_start(lines, j):
                 j += 1
@@ -63,7 +63,9 @@ def parse_blocks(md):
 def _is_block_start(lines, j):
     line = lines[j]
     return bool(
-        _HEADING.match(line) or _LIST.match(line) or _FENCE.match(line)
+        _HEADING.match(line)
+        or _LIST.match(line)
+        or _FENCE.match(line)
         or line.lstrip().startswith(">")
         or ("|" in line and j + 1 < len(lines) and _TABLE_SEP.match(lines[j + 1]))
     )
@@ -85,7 +87,7 @@ def _consume_list(lines, i, blocks):
         item_lines = [lines[i].rstrip()]
         j = i + 1
         while j < n and lines[j].strip() and not _LIST.match(lines[j]):
-            item_lines.append(lines[j].rstrip())    # continuation lines
+            item_lines.append(lines[j].rstrip())  # continuation lines
             j += 1
         blocks.append(
             Block(
@@ -105,8 +107,10 @@ def unsupported(blocks):
         if b.kind != "other":
             continue
         first = b.source.splitlines()[0][:60]
-        label = "image" if _IMAGE.search(b.source) else (
-            "footnote" if _FOOTNOTE_DEF.match(b.source) else "code fence"
+        label = (
+            "image"
+            if _IMAGE.search(b.source)
+            else ("footnote" if _FOOTNOTE_DEF.match(b.source) else "code fence")
         )
         out.append(f"{label}: {first!r}")
     return out

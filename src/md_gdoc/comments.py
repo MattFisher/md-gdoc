@@ -19,7 +19,7 @@ class CommentThread:
     resolved: bool
     quoted: str | None
     content: str
-    replies: list = field(default_factory=list)
+    replies: list["Reply"] = field(default_factory=list)
 
 
 def from_api(items):

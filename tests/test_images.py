@@ -34,10 +34,7 @@ def test_extracts_inline_data_uri_preserving_alt(tmp_path):
 
 
 def test_same_image_extracted_once(tmp_path):
-    md = (
-        f"![a](data:image/png;base64,{PNG_B64})\n\n"
-        f"![b](data:image/png;base64,{PNG_B64})\n"
-    )
+    md = f"![a](data:image/png;base64,{PNG_B64})\n\n![b](data:image/png;base64,{PNG_B64})\n"
     out = extract_images(md, tmp_path / "draft.md")
     files = list((tmp_path / "draft.assets").iterdir())
     assert len(files) == 1
@@ -74,9 +71,7 @@ def test_invalid_base64_left_untouched(tmp_path):
 
 # --- integration: pull and clone extract images ---
 
-REMOTE_WITH_IMAGE = (
-    f"Hello.\n\n![][image1]\n\n[image1]: <data:image/png;base64,{PNG_B64}>\n"
-)
+REMOTE_WITH_IMAGE = f"Hello.\n\n![][image1]\n\n[image1]: <data:image/png;base64,{PNG_B64}>\n"
 
 
 def test_pull_extracts_images_into_local_file_and_base(tmp_path):
@@ -113,7 +108,7 @@ def test_clean_pull_migrates_data_uris_already_in_local_file(tmp_path):
     text = md.read_text()
     assert "base64" not in text
     assert "draft.assets/" in text
-    assert text.startswith("---\ngdoc_id: d1\n")            # frontmatter intact
+    assert text.startswith("---\ngdoc_id: d1\n")  # frontmatter intact
     # The base snapshot moves with the file, so this isn't a phantom local edit:
     # a second pull is still clean.
     assert "base64" not in snapshot.load(md)

@@ -22,8 +22,7 @@ def doc_blocks(document):
     for el in document.get("body", {}).get("content", []):
         if "paragraph" in el:
             text = "".join(
-                e.get("textRun", {}).get("content", "")
-                for e in el["paragraph"].get("elements", [])
+                e.get("textRun", {}).get("content", "") for e in el["paragraph"].get("elements", [])
             )
             if text == "\n":
                 continue
@@ -39,7 +38,7 @@ def check_alignment(doc, md):
             f"doc has {len(doc)} blocks but markdown snapshot has {len(md)}; "
             "the diff path cannot proceed — pull first or push --replace"
         )
-    for i, (d, m) in enumerate(zip(doc, md)):
+    for i, (d, m) in enumerate(zip(doc, md, strict=False)):
         if (d.kind == "table") != (m.kind == "table"):
             raise AlignmentError(
                 f"block {i} is a {d.kind} in the doc but {m.kind} in markdown; "

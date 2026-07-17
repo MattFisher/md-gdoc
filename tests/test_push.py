@@ -12,12 +12,17 @@ def _doc(paragraphs):
     content, idx = [{"endIndex": 1, "sectionBreak": {}}], 1
     for p in paragraphs:
         end = idx + len(p) + 1
-        content.append({
-            "startIndex": idx, "endIndex": end,
-            "paragraph": {"elements": [
-                {"startIndex": idx, "endIndex": end, "textRun": {"content": p + "\n"}}
-            ]},
-        })
+        content.append(
+            {
+                "startIndex": idx,
+                "endIndex": end,
+                "paragraph": {
+                    "elements": [
+                        {"startIndex": idx, "endIndex": end, "textRun": {"content": p + "\n"}}
+                    ]
+                },
+            }
+        )
         idx = end
     return {"body": {"content": content}}
 
@@ -39,8 +44,8 @@ def test_first_push_binds_and_snapshots(tmp_path):
     res = push(md, FakeApi(export_md=BODY))
     assert res.state == "created"
     assert binding.read(md.read_text())[0] == "fake-id"
-    assert snapshot.load(md) == BODY          # local snapshot = what we sent
-    assert snapshot.load_remote(md) == BODY   # remote snapshot = what Google returned
+    assert snapshot.load(md) == BODY  # local snapshot = what we sent
+    assert snapshot.load_remote(md) == BODY  # remote snapshot = what Google returned
 
 
 def test_noop_when_unchanged(tmp_path):
@@ -81,14 +86,14 @@ def test_revision_push_targets_changed_block(tmp_path):
     api = FakeApi(export_md=BODY, document=DOC, export_md_after_update=post_edit_remote)
     res = push(md, api, yes=True)
     assert res.state == "pushed"
-    assert len(api.batch_updates) == 1               # one atomic call
+    assert len(api.batch_updates) == 1  # one atomic call
     reqs = api.batch_updates[0]
     # _doc layout: "T\n" -> 1..3, "One.\n" -> 3..8, "Two.\n" -> 8..13
-    delete = [r for r in reqs if "deleteContentRange" in r][0]["deleteContentRange"]
+    delete = next(r for r in reqs if "deleteContentRange" in r)["deleteContentRange"]
     assert delete["range"] == {"startIndex": 8, "endIndex": 13}
     inserts = [r for r in reqs if "insertText" in r]
     assert inserts[0]["insertText"]["text"] == "Two edited.\n"
-    assert snapshot.load(md) == local_body             # local snapshot = what we sent
+    assert snapshot.load(md) == local_body  # local snapshot = what we sent
     assert snapshot.load_remote(md) == post_edit_remote  # remote snapshot = Google's export
 
 
@@ -101,15 +106,27 @@ def test_divergence_aborts(tmp_path):
 
 def test_orphan_warning_aborts_without_confirmation(tmp_path):
     md = _setup(tmp_path, BOUND.replace("Two.", "Two edited."))
-    api = FakeApi(export_md=BODY, document=DOC, comments=[{
-        "id": "c1", "author": {"displayName": "S"}, "createdTime": "t",
-        "modifiedTime": "t", "resolved": False, "content": "?",
-        "quotedFileContent": {"value": "Two."}, "replies": [],
-    }])
+    api = FakeApi(
+        export_md=BODY,
+        document=DOC,
+        comments=[
+            {
+                "id": "c1",
+                "author": {"displayName": "S"},
+                "createdTime": "t",
+                "modifiedTime": "t",
+                "resolved": False,
+                "content": "?",
+                "quotedFileContent": {"value": "Two."},
+                "replies": [],
+            }
+        ],
+    )
     with pytest.raises(SystemExit):
         push(md, api, confirm=lambda prompt: "n")
     res = push(md, api, confirm=lambda prompt: "y")
-    assert res.state == "pushed" and res.orphaned == ["Two."]
+    assert res.state == "pushed"
+    assert res.orphaned == ["Two."]
 
 
 def test_unsupported_changed_block_aborts(tmp_path):
@@ -128,8 +145,7 @@ def test_replace_path(tmp_path):
     delete = api.batch_updates[0][0]["deleteContentRange"]["range"]
     assert delete == {"startIndex": 1, "endIndex": DOC["body"]["content"][-1]["endIndex"] - 1}
     inserted = "".join(
-        r["insertText"]["text"]
-        for reqs in api.batch_updates[1:] for r in reqs if "insertText" in r
+        r["insertText"]["text"] for reqs in api.batch_updates[1:] for r in reqs if "insertText" in r
     )
     assert "Anything" in inserted
 

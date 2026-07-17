@@ -32,9 +32,11 @@ Detail text here.
 # _split_by_tabs
 # ---------------------------------------------------------------------------
 
+
 def test_split_two_tabs():
     result = _split_by_tabs(TABBED_EXPORT, TABS)
-    assert "tab-a" in result and "tab-b" in result
+    assert "tab-a" in result
+    assert "tab-b" in result
     assert "Intro text." in result["tab-a"]
     assert "Detail text here." in result["tab-b"]
     # Tab header lines are not included in the body
@@ -97,6 +99,7 @@ def test_split_ignores_h1s_that_are_not_tab_titles():
 # binding.tab_id / binding.bind with tab_id
 # ---------------------------------------------------------------------------
 
+
 def test_binding_tab_id_returns_none_when_absent():
     assert binding.tab_id("# Hello\n\nBody.\n") is None
 
@@ -108,10 +111,12 @@ def test_binding_tab_id_reads_from_frontmatter():
 
 def test_binding_bind_with_tab_id():
     text = "# Hello\n\nBody.\n"
-    out = binding.bind(text, "doc-1", "https://docs.google.com/document/d/doc-1/edit", tab_id="tab-99")
+    out = binding.bind(
+        text, "doc-1", "https://docs.google.com/document/d/doc-1/edit", tab_id="tab-99"
+    )
     assert binding.tab_id(out) == "tab-99"
     # Existing binding fields still correct
-    doc_id, url, body = binding.read(out)
+    doc_id, _url, body = binding.read(out)
     assert doc_id == "doc-1"
     assert "Body." in body
 
@@ -125,6 +130,7 @@ def test_binding_bind_without_tab_id_omits_field():
 # _tab_filename
 # ---------------------------------------------------------------------------
 
+
 def test_tab_filename():
     assert _tab_filename("My Doc", "Overview") == "my-doc--overview.md"
     assert _tab_filename("Project", "Tab Two") == "project--tab-two.md"
@@ -133,6 +139,7 @@ def test_tab_filename():
 # ---------------------------------------------------------------------------
 # clone with tabs
 # ---------------------------------------------------------------------------
+
 
 class _TabbedApi(FakeApi):
     """FakeApi that advertises two tabs and returns split export."""
@@ -230,6 +237,7 @@ def test_clone_tabbed_creates_directory_if_missing(tmp_path, monkeypatch):
 # pull with tab_id
 # ---------------------------------------------------------------------------
 
+
 class _TabPullApi(FakeApi):
     """FakeApi that returns different content for tab vs full export."""
 
@@ -248,9 +256,7 @@ def test_pull_uses_tab_export_when_tab_id_set(tmp_path):
     tab_body = "Updated tab content.\n"
     # Create a file that was cloned from a tab
     md = tmp_path / "doc--overview.md"
-    md.write_text(
-        "---\ngdoc_id: fake-id\ngdoc_url: u\ntab_id: tab-a\n---\nOld content.\n"
-    )
+    md.write_text("---\ngdoc_id: fake-id\ngdoc_url: u\ntab_id: tab-a\n---\nOld content.\n")
     snapshot.save(md, "Old content.\n")
     snapshot.save_remote(md, "Old content.\n")
 
