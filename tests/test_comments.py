@@ -10,23 +10,34 @@ API_ITEMS = [
         "quotedFileContent": {"value": "the anchored text"},
         "content": "This claim needs a source.",
         "replies": [
-            {"author": {"displayName": "Matt"}, "createdTime": "2026-07-01T11:00:00Z",
-             "content": "Good point, will add."}
+            {
+                "author": {"displayName": "Matt"},
+                "createdTime": "2026-07-01T11:00:00Z",
+                "content": "Good point, will add.",
+            }
         ],
     },
-    {"id": "c2", "author": {"displayName": "Bob"}, "createdTime": "2026-07-01T09:30:00Z",
-     "modifiedTime": "2026-07-01T09:30:00Z", "resolved": True, "content": "Old note",
-     "replies": []},
+    {
+        "id": "c2",
+        "author": {"displayName": "Bob"},
+        "createdTime": "2026-07-01T09:30:00Z",
+        "modifiedTime": "2026-07-01T09:30:00Z",
+        "resolved": True,
+        "content": "Old note",
+        "replies": [],
+    },
     {"id": "c3", "deleted": True, "content": "", "replies": []},
 ]
 
 
 def test_from_api():
     threads = from_api(API_ITEMS)
-    assert [t.id for t in threads] == ["c1", "c2"]           # deleted skipped
+    assert [t.id for t in threads] == ["c1", "c2"]  # deleted skipped
     t = threads[0]
-    assert t.author == "Sarah" and t.quoted == "the anchored text"
-    assert not t.resolved and threads[1].resolved
+    assert t.author == "Sarah"
+    assert t.quoted == "the anchored text"
+    assert not t.resolved
+    assert threads[1].resolved
     assert t.replies == [Reply("Matt", "2026-07-01T11:00:00Z", "Good point, will add.")]
     assert threads[1].quoted is None
 

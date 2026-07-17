@@ -44,14 +44,14 @@ def api():
     return GDocsApi(get_credentials())
 
 
-@pytest.fixture()
+@pytest.fixture
 def workdir(tmp_path):
     md = tmp_path / "full_features.md"
     shutil.copy(SOURCE, md)
     return md
 
 
-@pytest.fixture()
+@pytest.fixture
 def pushed(api, workdir):
     """Push the fixture, yield (md_path, doc_id), delete the doc after."""
     from md_gdoc import binding, snapshot
@@ -89,7 +89,8 @@ def test_comment_retrieval(api, pushed):
     res = pull(md, api)
     assert res.comment_count >= 1
     text = (md.parent / (md.name + ".comments.md")).read_text()
-    assert "e2e comment body" in text and "Intro paragraph" in text
+    assert "e2e comment body" in text
+    assert "Intro paragraph" in text
 
 
 def test_anchor_preservation_and_orphaning(api, pushed):
@@ -101,8 +102,9 @@ def test_anchor_preservation_and_orphaning(api, pushed):
     # Edit a DIFFERENT paragraph -> anchor must survive.
     md.write_text(md.read_text().replace("Intro paragraph", "Intro paragraph edited"))
     res = push(md, api, yes=True)
-    assert res.state == "pushed" and res.orphaned == []
-    comment = [c for c in api.list_comments(doc_id) if c["content"] == "anchored to closing"][0]
+    assert res.state == "pushed"
+    assert res.orphaned == []
+    comment = next(c for c in api.list_comments(doc_id) if c["content"] == "anchored to closing")
     assert comment.get("quotedFileContent", {}).get("value")  # still anchored
 
     # Now edit the anchored paragraph -> push reports the orphan.
@@ -115,9 +117,7 @@ def test_divergence_guard(api, pushed):
     from md_gdoc.push import push
 
     md, doc_id = pushed
-    api.batch_update(doc_id, [{
-        "insertText": {"location": {"index": 1}, "text": "Remote edit!\n"}
-    }])
+    api.batch_update(doc_id, [{"insertText": {"location": {"index": 1}, "text": "Remote edit!\n"}}])
     md.write_text(md.read_text().replace("Intro paragraph", "Local edit"))
     with pytest.raises(SystemExit, match="pull"):
         push(md, api, yes=True)

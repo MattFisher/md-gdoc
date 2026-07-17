@@ -1,6 +1,18 @@
 """Frontmatter binding between a markdown file and its Google Doc."""
 
+from typing import Any
+
 import frontmatter
+
+
+def _meta_str(post: Any, key: str) -> str | None:
+    """Read a string value out of frontmatter metadata.
+
+    Frontmatter is arbitrary YAML, so a non-string (or absent) value is treated
+    as unset rather than handed back as the wrong type.
+    """
+    value = post.metadata.get(key)
+    return value if isinstance(value, str) else None
 
 
 def read(text: str) -> tuple[str | None, str | None, str]:
@@ -10,22 +22,22 @@ def read(text: str) -> tuple[str | None, str | None, str]:
     if content and not content.endswith("\n"):
         content = content + "\n"
     return (
-        post.metadata.get("gdoc_id"),
-        post.metadata.get("gdoc_url"),
+        _meta_str(post, "gdoc_id"),
+        _meta_str(post, "gdoc_url"),
         content,
     )
 
 
 def tab_id(text: str) -> str | None:
-    return frontmatter.loads(text).metadata.get("tab_id")
+    return _meta_str(frontmatter.loads(text), "tab_id")
 
 
 def comments_file(text: str) -> str | None:
-    return frontmatter.loads(text).metadata.get("comments_file")
+    return _meta_str(frontmatter.loads(text), "comments_file")
 
 
-def _dump(post):
-    out = frontmatter.dumps(post)
+def _dump(post: Any) -> str:
+    out: str = frontmatter.dumps(post)
     return out if out.endswith("\n") else out + "\n"
 
 

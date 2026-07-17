@@ -1,4 +1,3 @@
-
 from md_gdoc import snapshot
 from md_gdoc.api import GDocsApi
 

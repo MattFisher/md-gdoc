@@ -19,7 +19,8 @@ def _setup(tmp_path, local=BOUND, snap=BODY):
 def test_pull_clean(tmp_path):
     md = _setup(tmp_path)
     res = pull(md, FakeApi(export_md=BODY))
-    assert res.state == "clean" and res.comment_count == 0
+    assert res.state == "clean"
+    assert res.comment_count == 0
     assert (tmp_path / "draft.md.comments.md").exists()
 
 
@@ -40,8 +41,8 @@ def test_pull_updated_normalizes_google_dialect(tmp_path):
     assert res.state == "updated"
     body = binding.read(md.read_text())[2]
     assert body == "# T\n\n- one\n- two with **bold**\n"
-    assert snapshot.load(md) == body                       # base matches file
-    assert snapshot.load_remote(md) == google_dialect      # remote kept raw
+    assert snapshot.load(md) == body  # base matches file
+    assert snapshot.load_remote(md) == google_dialect  # remote kept raw
 
 
 def test_pull_conflict(tmp_path):
@@ -50,8 +51,8 @@ def test_pull_conflict(tmp_path):
     res = pull(md, FakeApi(export_md="# T\n\nHello remote.\n"))
     assert res.state == "conflict"
     assert res.remote_path.read_text() == "# T\n\nHello remote.\n"
-    assert "Hello local." in md.read_text()          # untouched
-    assert snapshot.load(md) == BODY                 # untouched
+    assert "Hello local." in md.read_text()  # untouched
+    assert snapshot.load(md) == BODY  # untouched
 
 
 def test_pull_missing_snapshot_differing(tmp_path):
@@ -69,10 +70,20 @@ def test_pull_unbound_file_exits(tmp_path):
 
 def test_pull_writes_comments(tmp_path):
     md = _setup(tmp_path)
-    api = FakeApi(export_md=BODY, comments=[{
-        "id": "c1", "author": {"displayName": "Sarah"}, "createdTime": "t",
-        "modifiedTime": "t", "resolved": False, "content": "hi", "replies": [],
-    }])
+    api = FakeApi(
+        export_md=BODY,
+        comments=[
+            {
+                "id": "c1",
+                "author": {"displayName": "Sarah"},
+                "createdTime": "t",
+                "modifiedTime": "t",
+                "resolved": False,
+                "content": "hi",
+                "replies": [],
+            }
+        ],
+    )
     res = pull(md, api)
     assert res.comment_count == 1
     assert "Sarah" in (tmp_path / "draft.md.comments.md").read_text()

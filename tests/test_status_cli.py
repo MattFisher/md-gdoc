@@ -11,21 +11,40 @@ def test_status_clean(tmp_path):
     md.write_text(BOUND)
     snapshot.save(md, BODY)
     res = status(md, FakeApi(export_md=BODY))
-    assert res.remote_changed is False and res.open_comments == 0
+    assert res.remote_changed is False
+    assert res.open_comments == 0
 
 
 def test_status_remote_changed_and_comments(tmp_path):
     md = tmp_path / "draft.md"
     md.write_text(BOUND)
     snapshot.save(md, BODY)
-    api = FakeApi(export_md="# T\n\nEdited.\n", comments=[
-        {"id": "c1", "author": {"displayName": "S"}, "createdTime": "t",
-         "modifiedTime": "t", "resolved": False, "content": "x", "replies": []},
-        {"id": "c2", "author": {"displayName": "S"}, "createdTime": "t",
-         "modifiedTime": "t", "resolved": True, "content": "y", "replies": []},
-    ])
+    api = FakeApi(
+        export_md="# T\n\nEdited.\n",
+        comments=[
+            {
+                "id": "c1",
+                "author": {"displayName": "S"},
+                "createdTime": "t",
+                "modifiedTime": "t",
+                "resolved": False,
+                "content": "x",
+                "replies": [],
+            },
+            {
+                "id": "c2",
+                "author": {"displayName": "S"},
+                "createdTime": "t",
+                "modifiedTime": "t",
+                "resolved": True,
+                "content": "y",
+                "replies": [],
+            },
+        ],
+    )
     res = status(md, api)
-    assert res.remote_changed is True and res.open_comments == 1
+    assert res.remote_changed is True
+    assert res.open_comments == 1
 
 
 def test_cli_help_needs_no_credentials(capsys):

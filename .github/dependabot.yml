@@ -1,0 +1,23 @@
+version: 2
+updates:
+  # Bump the SHA-pinned GitHub Actions (opens PRs with changelogs + the new pin).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7 # don't adopt a release until it's had time to be vetted/yanked
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Keep Python dependencies (pyproject.toml + uv.lock) current.
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      python:
+        patterns: ["*"]

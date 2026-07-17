@@ -24,9 +24,15 @@ Final paragraph.
 def test_kinds_in_order():
     kinds = [b.kind for b in parse_blocks(MD)]
     assert kinds == [
-        "heading", "paragraph",
-        "list_item", "list_item", "list_item", "list_item",
-        "quote", "table", "paragraph",
+        "heading",
+        "paragraph",
+        "list_item",
+        "list_item",
+        "list_item",
+        "list_item",
+        "quote",
+        "table",
+        "paragraph",
     ]
 
 
@@ -38,12 +44,12 @@ def test_list_item_details():
     blocks = [b for b in parse_blocks(MD) if b.kind == "list_item"]
     assert blocks[0].source == "- first item"
     assert blocks[1].source == "- second item\n  nested continuation"
-    assert blocks[2].level == 1                    # "  - nested item"
-    assert blocks[3].ordered is True               # "1. numbered one"
+    assert blocks[2].level == 1  # "  - nested item"
+    assert blocks[3].ordered is True  # "1. numbered one"
 
 
 def test_table_is_one_block():
-    table = [b for b in parse_blocks(MD) if b.kind == "table"][0]
+    table = next(b for b in parse_blocks(MD) if b.kind == "table")
     assert table.source.count("\n") == 2
 
 

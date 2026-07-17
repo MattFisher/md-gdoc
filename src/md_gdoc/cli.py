@@ -15,10 +15,14 @@ def main(argv=None):
 
     p_push = sub.add_parser("push", help="create or update the Google Doc from the file")
     p_push.add_argument("file")
-    p_push.add_argument("--replace", action="store_true",
-                        help="re-import the whole doc (orphans ALL comment anchors)")
-    p_push.add_argument("--force", action="store_true",
-                        help="push even if the remote doc has unpulled changes")
+    p_push.add_argument(
+        "--replace",
+        action="store_true",
+        help="re-import the whole doc (orphans ALL comment anchors)",
+    )
+    p_push.add_argument(
+        "--force", action="store_true", help="push even if the remote doc has unpulled changes"
+    )
     p_push.add_argument("--yes", action="store_true", help="skip confirmation prompts")
 
     p_pull = sub.add_parser("pull", help="fetch comments and remote edits")
@@ -26,8 +30,9 @@ def main(argv=None):
 
     p_clone = sub.add_parser("clone", help="create a local file from an existing Google Doc")
     p_clone.add_argument("url", metavar="URL_OR_ID", help="Google Doc URL or bare document ID")
-    p_clone.add_argument("file", nargs="?", metavar="FILE",
-                         help="output path (default: derived from document title)")
+    p_clone.add_argument(
+        "file", nargs="?", metavar="FILE", help="output path (default: derived from document title)"
+    )
 
     p_status = sub.add_parser("status", help="check for remote changes and open comments")
     p_status.add_argument("file")
@@ -85,6 +90,7 @@ def _run(args, api):
                 print(f"Cloned to {r.path}")
             first = res[0]
             from . import binding as _binding
+
             cf = _binding.comments_file(first.path.read_text(encoding="utf-8"))
             comments_path = (first.path.parent / cf) if cf else (str(first.path) + ".comments.md")
             print(f"{first.comment_count} comment(s) saved to {comments_path}")

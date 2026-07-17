@@ -74,7 +74,8 @@ def test_paragraph_requests():
     assert para["range"] == {"startIndex": 10, "endIndex": 22}
     style = reqs[2]["updateTextStyle"]
     assert style["range"] == {"startIndex": 16, "endIndex": 21}
-    assert style["textStyle"] == {"bold": True} and style["fields"] == "bold"
+    assert style["textStyle"] == {"bold": True}
+    assert style["fields"] == "bold"
 
 
 def test_heading_requests():
@@ -174,25 +175,23 @@ def test_parse_table():
 
 def test_table_requests_shape():
     reqs = table_requests(TABLE, 20)
-    assert reqs[0] == {
-        "insertTable": {"location": {"index": 20}, "rows": 2, "columns": 2}
-    }
+    assert reqs[0] == {"insertTable": {"location": {"index": 20}, "rows": 2, "columns": 2}}
     inserts = [r["insertText"] for r in reqs if "insertText" in r]
     # reverse cell order: b, a, h2, h1
     assert [i["text"] for i in inserts] == ["b", "a", "h2", "h1"]
     # formula: index+4 + r*(2C+1) + 2c with index=20, C=2
     assert [i["location"]["index"] for i in inserts] == [
-        20 + 4 + 1 * 5 + 2 * 1,   # (1,1) -> 31
-        20 + 4 + 1 * 5 + 2 * 0,   # (1,0) -> 29
-        20 + 4 + 0 * 5 + 2 * 1,   # (0,1) -> 26
-        20 + 4 + 0 * 5 + 2 * 0,   # (0,0) -> 24
+        20 + 4 + 1 * 5 + 2 * 1,  # (1,1) -> 31
+        20 + 4 + 1 * 5 + 2 * 0,  # (1,0) -> 29
+        20 + 4 + 0 * 5 + 2 * 1,  # (0,1) -> 26
+        20 + 4 + 0 * 5 + 2 * 0,  # (0,0) -> 24
     ]
 
 
 def test_table_cell_styles():
     reqs = table_requests(TABLE, 20)
     styles = [r["updateTextStyle"] for r in reqs if "updateTextStyle" in r]
-    assert len(styles) == 1                       # only **b** is styled
+    assert len(styles) == 1  # only **b** is styled
     assert styles[0]["range"] == {"startIndex": 31, "endIndex": 32}
     assert styles[0]["textStyle"] == {"bold": True}
     assert styles[0]["fields"] == "bold"

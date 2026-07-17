@@ -31,7 +31,10 @@ def _extract_code_regions(md):
     Extraction happens BEFORE the un-escape pass so code content — which the
     exporter emits raw inside spans — stays byte-exact.
     """
-    lines, out, stash, region = md.split("\n"), [], [], None
+    lines = md.split("\n")
+    out: list[str] = []
+    stash: list[str] = []
+    region: list[str] | None = None
     for line in lines:
         sc = _span_content(line)
         if region is None:
@@ -48,7 +51,7 @@ def _extract_code_regions(md):
             region.append(sc[0] + sc[1])
         else:
             region.append(line.rstrip())
-    if region is not None:                        # unterminated: emit as-is
+    if region is not None:  # unterminated: emit as-is
         out += region
     return "\n".join(out), stash
 
@@ -60,7 +63,7 @@ def _restore_code_regions(md, stash):
 
 
 def _clean_code_blocks(md):
-    """Strip trailing whitespace within legacy escaped-fence code blocks.
+    r"""Strip trailing whitespace within legacy escaped-fence code blocks.
 
     Docs pushed before the code-font change exported code blocks as escaped
     \\`\\`\\` fence lines with hard-break trailing spaces; keep decoding them
@@ -69,7 +72,7 @@ def _clean_code_blocks(md):
     lines, result, in_fence = md.split("\n"), [], False
     for i, line in enumerate(lines):
         stripped = line.rstrip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
+        if stripped.startswith(("```", "~~~")):
             closing = in_fence
             in_fence = not in_fence
             result.append(stripped)

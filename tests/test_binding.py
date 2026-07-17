@@ -28,13 +28,14 @@ def test_read_bound_file():
 
 def test_read_unbound_file():
     doc_id, url, body = binding.read(NO_FM)
-    assert doc_id is None and url is None
+    assert doc_id is None
+    assert url is None
     assert body == NO_FM
 
 
 def test_bind_creates_frontmatter():
     out = binding.bind(NO_FM, "xyz", "https://docs.google.com/document/d/xyz/edit")
-    doc_id, url, body = binding.read(out)
+    doc_id, _url, body = binding.read(out)
     assert doc_id == "xyz"
     assert body == NO_FM
 

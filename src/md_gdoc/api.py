@@ -31,11 +31,11 @@ def _split_by_tabs(full_md, tabs):
     # Content before the first marker → first tab (if that tab has no marker)
     first_tab_id = tabs[0]["id"]
     if markers[0][0] > 0 and first_tab_id not in {m[1] for m in markers}:
-        pre = "\n".join(lines[:markers[0][0]]).strip()
+        pre = "\n".join(lines[: markers[0][0]]).strip()
         result[first_tab_id] = (pre + "\n") if pre else "\n"
     for n, (start, tab_id) in enumerate(markers):
         end = markers[n + 1][0] if n + 1 < len(markers) else len(lines)
-        content = "\n".join(lines[start + 1:end]).strip()
+        content = "\n".join(lines[start + 1 : end]).strip()
         result[tab_id] = (content + "\n") if content else "\n"
     return result
 
@@ -77,9 +77,11 @@ class GDocsApi:
         if len(raw) <= 1:
             return []
         return [
-            {"id": t["tabProperties"]["tabId"],
-             "title": t["tabProperties"]["title"],
-             "index": t["tabProperties"]["index"]}
+            {
+                "id": t["tabProperties"]["tabId"],
+                "title": t["tabProperties"]["title"],
+                "index": t["tabProperties"]["index"],
+            }
             for t in raw
         ]
 
@@ -111,17 +113,24 @@ class GDocsApi:
                 return
             except HttpError as e:
                 if e.resp.status == 429 and attempt < 4:
-                    time.sleep(2 ** attempt * 15)
+                    time.sleep(2**attempt * 15)
                 else:
                     raise
 
     def list_comments(self, doc_id):
         items, token = [], None
         while True:
-            resp = self._drive.comments().list(
-                fileId=doc_id, fields="*", includeDeleted=False,
-                pageSize=100, pageToken=token,
-            ).execute()
+            resp = (
+                self._drive.comments()
+                .list(
+                    fileId=doc_id,
+                    fields="*",
+                    includeDeleted=False,
+                    pageSize=100,
+                    pageToken=token,
+                )
+                .execute()
+            )
             items += resp.get("comments", [])
             token = resp.get("nextPageToken")
             if not token:
@@ -133,9 +142,7 @@ class GDocsApi:
         body = {"content": content}
         if quoted:
             body["quotedFileContent"] = {"value": quoted}
-        return self._drive.comments().create(
-            fileId=doc_id, body=body, fields="*"
-        ).execute()
+        return self._drive.comments().create(fileId=doc_id, body=body, fields="*").execute()
 
     def delete_file(self, doc_id):
         self._drive.files().delete(fileId=doc_id).execute()
@@ -146,7 +153,9 @@ class GDocsApi:
         found = self._drive.files().list(q=q, fields="files(id)").execute()["files"]
         if found:
             return found[0]["id"]
-        f = self._drive.files().create(
-            body={"name": name, "mimeType": _FOLDER_MIME}, fields="id"
-        ).execute()
+        f = (
+            self._drive.files()
+            .create(body={"name": name, "mimeType": _FOLDER_MIME}, fields="id")
+            .execute()
+        )
         return f["id"]

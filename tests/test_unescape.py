@@ -41,9 +41,7 @@ def test_span_encoded_code_block_decoded():
         "```` ``` ````  \n"
         "After.  \n"
     )
-    assert clean(exported) == (
-        "Before.  \n\n```python\ndef f():\n    return 1\n```\n\nAfter.  \n"
-    )
+    assert clean(exported) == ("Before.  \n\n```python\ndef f():\n    return 1\n```\n\nAfter.  \n")
 
 
 def test_span_encoded_code_preserves_backticks_and_escapes():
@@ -51,21 +49,18 @@ def test_span_encoded_code_preserves_backticks_and_escapes():
     # delimiters and backslashes must NOT be un-escaped.
     exported = (
         "```` ```md ````  \n"
-        "``run `pytest` -k \"x\"``  \n"
+        '``run `pytest` -k "x"``  \n'
         "`literal \\* star`  \n"
         "\n"
         "`last`  \n"
         "```` ``` ````  \n"
     )
-    assert clean(exported) == (
-        '```md\nrun `pytest` -k "x"\nliteral \\* star\n\nlast\n```\n'
-    )
+    assert clean(exported) == ('```md\nrun `pytest` -k "x"\nliteral \\* star\n\nlast\n```\n')
 
 
 def test_span_encoded_adjacent_blocks_separated():
     exported = (
-        "```` ```a ````  \n`x`  \n```` ``` ````  \n"
-        "```` ```b ````  \n`y`  \n```` ``` ````  \n"
+        "```` ```a ````  \n`x`  \n```` ``` ````  \n```` ```b ````  \n`y`  \n```` ``` ````  \n"
     )
     assert clean(exported) == "```a\nx\n```\n\n```b\ny\n```\n"
 

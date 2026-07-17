@@ -2,12 +2,18 @@
 
 import re as _re
 from dataclasses import dataclass, replace
+from typing import Any
 
 from markdown_it import MarkdownIt
 
+from md_gdoc.mdblocks import Block
+
 _md = MarkdownIt("commonmark")
 
-_MARKER = {"heading": _re.compile(r"^#{1,6}\s+"), "list_item": _re.compile(r"^\s*([-*+]|\d+[.)])\s+")}
+_MARKER = {
+    "heading": _re.compile(r"^#{1,6}\s+"),
+    "list_item": _re.compile(r"^\s*([-*+]|\d+[.)])\s+"),
+}
 
 
 def _loc(index, tab_id=None):
@@ -29,7 +35,7 @@ class Run:
     text: str
     bold: bool = False
     italic: bool = False
-    link: str = None
+    link: str | None = None
     code: bool = False
 
 
@@ -54,7 +60,8 @@ def inline_runs(text):
         elif tok.type == "em_close":
             italic -= 1
         elif tok.type == "link_open":
-            link = tok.attrs.get("href")
+            href = tok.attrs.get("href")
+            link = str(href) if href is not None else None
         elif tok.type == "link_close":
             link = None
         elif tok.type == "code_inline":
@@ -67,7 +74,7 @@ def inline_runs(text):
 
 
 def _merge(runs):
-    out = []
+    out: list[Run] = []
     for r in runs:
         if out and (
             (out[-1].bold, out[-1].italic, out[-1].link, out[-1].code)
@@ -133,7 +140,8 @@ def _style_requests(runs, offset, tab_id=None):
     reqs = []
     for r in runs:
         end = offset + len(r.text)
-        style, fields = {}, []
+        style: dict[str, Any] = {}
+        fields: list[str] = []
         if r.bold:
             style["bold"] = True
             fields.append("bold")
@@ -148,13 +156,15 @@ def _style_requests(runs, offset, tab_id=None):
             style["foregroundColor"] = _CODE_COLOR
             fields += ["weightedFontFamily", "foregroundColor"]
         if fields:
-            reqs.append({
-                "updateTextStyle": {
-                    "range": _rng(offset, end, tab_id),
-                    "textStyle": style,
-                    "fields": ",".join(fields),
+            reqs.append(
+                {
+                    "updateTextStyle": {
+                        "range": _rng(offset, end, tab_id),
+                        "textStyle": style,
+                        "fields": ",".join(fields),
+                    }
                 }
-            })
+            )
         offset = end
     return reqs
 
@@ -179,30 +189,38 @@ def list_requests(blocks, index, tab_id=None):
     return [
         {"insertText": {**_loc(index, tab_id), "text": full}},
         # Reset any inherited heading style before applying bullets.
-        {"updateParagraphStyle": {
-            "range": run_rng,
-            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
-            "fields": "namedStyleType",
-        }},
+        {
+            "updateParagraphStyle": {
+                "range": run_rng,
+                "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                "fields": "namedStyleType",
+            }
+        },
         *style_reqs,
         # Last: createParagraphBullets consumes the leading tabs, shifting
         # indices, so every index-addressed request must come before it.
-        {"createParagraphBullets": {
-            "range": run_rng,
-            "bulletPreset": preset,
-        }},
+        {
+            "createParagraphBullets": {
+                "range": run_rng,
+                "bulletPreset": preset,
+            }
+        },
     ]
 
 
-def segment_blocks(blocks):
-    """Split blocks into runs: consecutive list_items with the same ordered-ness
-    form one run (they must be inserted together — see list_requests); every
-    other block is a run of one."""
-    runs = []
+def segment_blocks(blocks: list[Block]) -> list[list[Block]]:
+    """Split blocks into runs of consecutive same-ordered-ness list_items.
+
+    Such items must be inserted together (see list_requests); every other block
+    is a run of one.
+    """
+    runs: list[list[Block]] = []
     for b in blocks:
         if (
-            b.kind == "list_item" and runs
-            and runs[-1][0].kind == "list_item" and runs[-1][0].ordered == b.ordered
+            b.kind == "list_item"
+            and runs
+            and runs[-1][0].kind == "list_item"
+            and runs[-1][0].ordered == b.ordered
         ):
             runs[-1].append(b)
         else:
@@ -232,26 +250,30 @@ def block_requests(block, index, tab_id=None):
     # Named paragraph styles must be applied BEFORE character styles: applying
     # a namedStyleType resets bold/italic/links on the range.
     if block.kind == "quote":
-        reqs.append({
-            "updateParagraphStyle": {
-                "range": rng,
-                "paragraphStyle": {
-                    "namedStyleType": "NORMAL_TEXT",
-                    "indentStart": {"magnitude": 36, "unit": "PT"},
-                    "indentFirstLine": {"magnitude": 36, "unit": "PT"},
-                },
-                "fields": "namedStyleType,indentStart,indentFirstLine",
+        reqs.append(
+            {
+                "updateParagraphStyle": {
+                    "range": rng,
+                    "paragraphStyle": {
+                        "namedStyleType": "NORMAL_TEXT",
+                        "indentStart": {"magnitude": 36, "unit": "PT"},
+                        "indentFirstLine": {"magnitude": 36, "unit": "PT"},
+                    },
+                    "fields": "namedStyleType,indentStart,indentFirstLine",
+                }
             }
-        })
+        )
     else:
         named = f"HEADING_{block.level}" if block.kind == "heading" else "NORMAL_TEXT"
-        reqs.append({
-            "updateParagraphStyle": {
-                "range": rng,
-                "paragraphStyle": {"namedStyleType": named},
-                "fields": "namedStyleType",
+        reqs.append(
+            {
+                "updateParagraphStyle": {
+                    "range": rng,
+                    "paragraphStyle": {"namedStyleType": named},
+                    "fields": "namedStyleType",
+                }
             }
-        })
+        )
 
     return reqs + _style_requests(runs, index, tab_id)
 
@@ -260,7 +282,7 @@ def parse_table(source):
     rows = []
     for i, line in enumerate(source.split("\n")):
         if i == 1:
-            continue                              # separator row
+            continue  # separator row
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         rows.append(cells)
     return rows
@@ -278,7 +300,7 @@ def table_requests(block, index, tab_id=None):
     rows = parse_table(block.source)
     n_rows, n_cols = len(rows), len(rows[0])
     reqs = [{"insertTable": {**_loc(index, tab_id), "rows": n_rows, "columns": n_cols}}]
-    for r in range(n_rows - 1, -1, -1):           # reverse: highest index first
+    for r in range(n_rows - 1, -1, -1):  # reverse: highest index first
         for c in range(n_cols - 1, -1, -1):
             cell_md = rows[r][c]
             if not cell_md:
