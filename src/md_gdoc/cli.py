@@ -1,11 +1,13 @@
 """md-gdoc command line interface."""
 
+from __future__ import annotations
+
 import argparse
 
 from . import __version__
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int | None:
     parser = argparse.ArgumentParser(
         prog="md-gdoc",
         description="Sync local markdown with Google Docs (push/pull/status).",
@@ -68,7 +70,7 @@ def main(argv=None):
         ) from e
 
 
-def _run(args, api):
+def _run(args: argparse.Namespace, api: GDocsApi) -> int | None:
     if args.command == "push":
         from .push import push
 
