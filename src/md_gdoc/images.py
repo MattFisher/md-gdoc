@@ -11,17 +11,18 @@ link.
 import base64
 import hashlib
 import re
+from pathlib import Path
 
 _DATA_URI = re.compile(r"data:image/([A-Za-z0-9.+-]+);base64,([A-Za-z0-9+/=]+)")
 
 _EXT = {"jpeg": "jpg", "svg+xml": "svg"}
 
 
-def extract_images(md, md_path):
+def extract_images(md: str, md_path: Path) -> str:
     """Rewrite data-URI images in md to files under <stem>.assets/ beside md_path."""
     assets = md_path.parent / (md_path.stem + ".assets")
 
-    def _replace(m):
+    def _replace(m: re.Match[str]) -> str:
         subtype, b64 = m.groups()
         try:
             data = base64.b64decode(b64, validate=True)

@@ -1,10 +1,13 @@
 """Map a documents.get response onto diffable block ranges."""
 
 from dataclasses import dataclass
+from typing import Any
+
+from md_gdoc.mdblocks import Block
 
 
 class AlignmentError(Exception):
-    def __init__(self, detail):
+    def __init__(self, detail: str) -> None:
         super().__init__(detail)
         self.detail = detail
 
@@ -17,8 +20,8 @@ class DocBlock:
     text: str
 
 
-def doc_blocks(document):
-    out = []
+def doc_blocks(document: dict[str, Any]) -> list[DocBlock]:
+    out: list[DocBlock] = []
     for el in document.get("body", {}).get("content", []):
         if "paragraph" in el:
             text = "".join(
@@ -32,7 +35,7 @@ def doc_blocks(document):
     return out
 
 
-def check_alignment(doc, md):
+def check_alignment(doc: list[DocBlock], md: list[Block]) -> None:
     if len(doc) != len(md):
         raise AlignmentError(
             f"doc has {len(doc)} blocks but markdown snapshot has {len(md)}; "

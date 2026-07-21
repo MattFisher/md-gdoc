@@ -8,6 +8,9 @@ from markdown_it import MarkdownIt
 
 from md_gdoc.mdblocks import Block
 
+# A single Docs API batchUpdate request object.
+Request = dict[str, Any]
+
 _md = MarkdownIt("commonmark")
 
 _MARKER = {
@@ -16,15 +19,15 @@ _MARKER = {
 }
 
 
-def _loc(index, tab_id=None):
-    d = {"index": index}
+def _loc(index: int, tab_id: str | None = None) -> Request:
+    d: dict[str, Any] = {"index": index}
     if tab_id:
         d["tabId"] = tab_id
     return {"location": d}
 
 
-def _rng(start, end, tab_id=None):
-    d = {"startIndex": start, "endIndex": end}
+def _rng(start: int, end: int, tab_id: str | None = None) -> Request:
+    d: dict[str, Any] = {"startIndex": start, "endIndex": end}
     if tab_id:
         d["tabId"] = tab_id
     return d
@@ -47,7 +50,7 @@ _CODE_FONT = {"fontFamily": "Fira Code"}
 _CODE_COLOR = {"color": {"rgbColor": {"red": 0.09411765, "green": 0.5019608, "blue": 0.21960784}}}
 
 
-def inline_runs(text):
+def inline_runs(text: str) -> list[Run]:
     tokens = _md.parseInline(text)[0].children or []
     runs, bold, italic, link = [], 0, 0, None
     for tok in tokens:
@@ -73,7 +76,7 @@ def inline_runs(text):
     return _merge(runs)
 
 
-def _merge(runs):
+def _merge(runs: list[Run]) -> list[Run]:
     out: list[Run] = []
     for r in runs:
         if out and (
@@ -86,7 +89,7 @@ def _merge(runs):
     return out
 
 
-def content_text(block):
+def content_text(block: Block) -> str:
     if block.kind == "heading":
         return _MARKER["heading"].sub("", block.source)
     if block.kind == "list_item":
@@ -98,7 +101,7 @@ def content_text(block):
     return block.source
 
 
-def _code_requests(block, index, tab_id=None):
+def _code_requests(block: Block, index: int, tab_id: str | None = None) -> list[Request]:
     # Store as one paragraph with soft line breaks (\v) between lines so the
     # whole block is a single doc paragraph (keeps docmodel alignment 1:1).
     # \r is NOT accepted by the Docs API as a line break (it gets dropped,
@@ -136,7 +139,7 @@ def _code_requests(block, index, tab_id=None):
     ]
 
 
-def _style_requests(runs, offset, tab_id=None):
+def _style_requests(runs: list[Run], offset: int, tab_id: str | None = None) -> list[Request]:
     reqs = []
     for r in runs:
         end = offset + len(r.text)
@@ -169,7 +172,7 @@ def _style_requests(runs, offset, tab_id=None):
     return reqs
 
 
-def list_requests(blocks, index, tab_id=None):
+def list_requests(blocks: list[Block], index: int, tab_id: str | None = None) -> list[Request]:
     """Requests for a run of consecutive list_item blocks (same ordered-ness).
 
     The whole run gets ONE insertText and ONE createParagraphBullets: applying
@@ -228,14 +231,14 @@ def segment_blocks(blocks: list[Block]) -> list[list[Block]]:
     return runs
 
 
-def run_requests(run, index, tab_id=None):
+def run_requests(run: list[Block], index: int, tab_id: str | None = None) -> list[Request]:
     """Requests for one segment_blocks() run."""
     if run[0].kind == "list_item":
         return list_requests(run, index, tab_id)
     return block_requests(run[0], index, tab_id)
 
 
-def block_requests(block, index, tab_id=None):
+def block_requests(block: Block, index: int, tab_id: str | None = None) -> list[Request]:
     if block.kind == "table":
         return table_requests(block, index, tab_id)
     if block.kind == "code":
@@ -278,7 +281,7 @@ def block_requests(block, index, tab_id=None):
     return reqs + _style_requests(runs, index, tab_id)
 
 
-def parse_table(source):
+def parse_table(source: str) -> list[list[str]]:
     rows = []
     for i, line in enumerate(source.split("\n")):
         if i == 1:
@@ -288,7 +291,7 @@ def parse_table(source):
     return rows
 
 
-def _cell_index(index, r, c, cols):
+def _cell_index(index: int, r: int, c: int, cols: int) -> int:
     # Empty-table layout: +1 table element, then per row +1, per cell +2
     # (cell start + empty paragraph). First cell paragraph sits at index+4.
     # AUTHORITY: the e2e round-trip test (tests/e2e) validates this against
@@ -296,7 +299,7 @@ def _cell_index(index, r, c, cols):
     return index + 4 + r * (2 * cols + 1) + 2 * c
 
 
-def table_requests(block, index, tab_id=None):
+def table_requests(block: Block, index: int, tab_id: str | None = None) -> list[Request]:
     rows = parse_table(block.source)
     n_rows, n_cols = len(rows), len(rows[0])
     reqs = [{"insertTable": {**_loc(index, tab_id), "rows": n_rows, "columns": n_cols}}]

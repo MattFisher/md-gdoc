@@ -41,7 +41,13 @@ def _dump(post: Any) -> str:
     return out if out.endswith("\n") else out + "\n"
 
 
-def bind(text: str, gdoc_id: str, gdoc_url: str, tab_id=None, comments_file=None) -> str:
+def bind(
+    text: str,
+    gdoc_id: str,
+    gdoc_url: str,
+    tab_id: str | None = None,
+    comments_file: str | None = None,
+) -> str:
     post = frontmatter.loads(text)
     post.metadata["gdoc_id"] = gdoc_id
     post.metadata["gdoc_url"] = gdoc_url

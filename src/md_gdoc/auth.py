@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from typing import Any
 
 import google.auth.exceptions
 from google.auth.transport.requests import Request
@@ -12,19 +13,19 @@ SCOPES = ["https://www.googleapis.com/auth/drive"]
 _CONFIG = Path.home() / ".config" / "md-gdoc"
 
 
-def _credentials_path():
+def _credentials_path() -> Path:
     return Path(os.environ.get("MD_GDOC_CREDENTIALS", _CONFIG / "credentials.json"))
 
 
-def _token_path():
+def _token_path() -> Path:
     return Path(os.environ.get("MD_GDOC_TOKEN", _CONFIG / "token.json"))
 
 
-def get_credentials():
+def get_credentials() -> Any:
     token_path = _token_path()
     creds = None
     if token_path.exists():
-        creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
+        creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)  # type: ignore[no-untyped-call]
     if creds and creds.expired and creds.refresh_token:
         try:
             creds.refresh(Request())

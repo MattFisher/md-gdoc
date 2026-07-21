@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from md_gdoc.api import GDocsApi
+
 from . import binding, snapshot
 from .unescape import clean
 
@@ -14,7 +16,7 @@ class StatusResult:
     open_comments: int
 
 
-def status(md_path, api):
+def status(md_path: str | Path, api: GDocsApi) -> StatusResult:
     md_path = Path(md_path)
     text = md_path.read_text(encoding="utf-8")
     doc_id, url, _ = binding.read(text)
