@@ -140,7 +140,9 @@ class GDocsApi:
 
     # --- e2e helpers ---
 
-    def create_comment(self, doc_id: str, content: str, quoted: str | None = None) -> dict[str, Any]:
+    def create_comment(
+        self, doc_id: str, content: str, quoted: str | None = None
+    ) -> dict[str, Any]:
         body: dict[str, Any] = {"content": content}
         if quoted:
             body["quotedFileContent"] = {"value": quoted}

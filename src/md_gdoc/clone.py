@@ -44,9 +44,7 @@ class CloneResult:
     url: str
 
 
-def clone(
-    url_or_id: str, out_path: str | None, api: GDocsApi
-) -> "CloneResult | list[CloneResult]":
+def clone(url_or_id: str, out_path: str | None, api: GDocsApi) -> "CloneResult | list[CloneResult]":
     doc_id = _extract_doc_id(url_or_id)
     url = api.doc_url(doc_id)
 

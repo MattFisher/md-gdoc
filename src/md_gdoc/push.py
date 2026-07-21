@@ -156,7 +156,9 @@ def push(
     return PushResult("pushed", url or "", orphaned)
 
 
-def _insert_blocks(doc_id: str, blocks: list[Block], api: GDocsApi, tab_id: str | None = None) -> None:
+def _insert_blocks(
+    doc_id: str, blocks: list[Block], api: GDocsApi, tab_id: str | None = None
+) -> None:
     r"""Populate a blank doc with blocks, one run per batchUpdate.
 
     Consecutive list items form one run so their nesting survives.
