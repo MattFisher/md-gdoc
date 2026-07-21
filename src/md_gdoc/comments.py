@@ -1,6 +1,7 @@
 """Drive comments -> local comments markdown file."""
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -22,8 +23,8 @@ class CommentThread:
     replies: list["Reply"] = field(default_factory=list)
 
 
-def from_api(items):
-    threads = []
+def from_api(items: list[dict[str, Any]]) -> list[CommentThread]:
+    threads: list[CommentThread] = []
     for it in items:
         if it.get("deleted"):
             continue
@@ -49,7 +50,7 @@ def from_api(items):
     return threads
 
 
-def render(threads, source_name):
+def render(threads: list[CommentThread], source_name: str) -> str:
     lines = [f"# Comments on {source_name}", ""]
     if not threads:
         lines += ["No comments.", ""]

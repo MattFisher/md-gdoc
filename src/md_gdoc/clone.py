@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import snapshot
-from .api import _split_by_tabs
+from .api import GDocsApi, _split_by_tabs
 from .comments import from_api, render
 from .images import extract_images
 from .pull import _fmt
@@ -44,7 +44,9 @@ class CloneResult:
     url: str
 
 
-def clone(url_or_id: str, out_path: str | None, api) -> "CloneResult | list[CloneResult]":
+def clone(
+    url_or_id: str, out_path: str | None, api: GDocsApi
+) -> "CloneResult | list[CloneResult]":
     doc_id = _extract_doc_id(url_or_id)
     url = api.doc_url(doc_id)
 

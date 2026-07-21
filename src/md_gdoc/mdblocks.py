@@ -19,9 +19,10 @@ class Block:
     ordered: bool = False
 
 
-def parse_blocks(md):
+def parse_blocks(md: str) -> list[Block]:
     lines = md.replace("\r\n", "\n").split("\n")
-    blocks, i, n = [], 0, len(lines)
+    blocks: list[Block] = []
+    i, n = 0, len(lines)
     while i < n:
         if not lines[i].strip():
             i += 1
@@ -60,7 +61,7 @@ def parse_blocks(md):
     return blocks
 
 
-def _is_block_start(lines, j):
+def _is_block_start(lines: list[str], j: int) -> bool:
     line = lines[j]
     return bool(
         _HEADING.match(line)
@@ -71,13 +72,13 @@ def _is_block_start(lines, j):
     )
 
 
-def _paragraph_kind(source):
+def _paragraph_kind(source: str) -> str:
     if _FOOTNOTE_DEF.match(source) or _IMAGE.search(source):
         return "other"
     return "paragraph"
 
 
-def _consume_list(lines, i, blocks):
+def _consume_list(lines: list[str], i: int, blocks: list[Block]) -> int:
     n = len(lines)
     while i < n and lines[i].strip():
         m = _LIST.match(lines[i])
@@ -101,7 +102,7 @@ def _consume_list(lines, i, blocks):
     return i
 
 
-def unsupported(blocks):
+def unsupported(blocks: list[Block]) -> list[str]:
     out = []
     for b in blocks:
         if b.kind != "other":

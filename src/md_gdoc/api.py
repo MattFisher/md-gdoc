@@ -2,6 +2,7 @@
 
 import re
 import time
+from typing import Any, cast
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -9,12 +10,12 @@ from googleapiclient.errors import HttpError
 _FOLDER_MIME = "application/vnd.google-apps.folder"
 
 
-def _unescape_md(text):
+def _unescape_md(text: str) -> str:
     """Remove backslash escapes that Drive adds to markdown special chars."""
     return re.sub(r"\\(.)", r"\1", text)
 
 
-def _split_by_tabs(full_md, tabs):
+def _split_by_tabs(full_md: str, tabs: list[dict[str, Any]]) -> dict[str, str]:
     """Split Drive's concatenated export (tabs become H1s) into {tab_id: body}."""
     title_to_id = {t["title"]: t["id"] for t in tabs}
     lines = full_md.split("\n")
@@ -41,15 +42,15 @@ def _split_by_tabs(full_md, tabs):
 
 
 class GDocsApi:
-    def __init__(self, creds):
+    def __init__(self, creds: Any) -> None:
         self._drive = build("drive", "v3", credentials=creds)
         self._docs = build("docs", "v1", credentials=creds)
 
     @staticmethod
-    def doc_url(doc_id):
+    def doc_url(doc_id: str) -> str:
         return f"https://docs.google.com/document/d/{doc_id}/edit"
 
-    def create_doc(self, title, folder_id=None):
+    def create_doc(self, title: str, folder_id: str | None = None) -> tuple[str, str]:
         """Create a blank Google Doc and return (doc_id, url)."""
         doc = self._docs.documents().create(body={"title": title}).execute()
         doc_id = doc["documentId"]
@@ -59,14 +60,14 @@ class GDocsApi:
             ).execute()
         return doc_id, self.doc_url(doc_id)
 
-    def export_markdown(self, doc_id):
+    def export_markdown(self, doc_id: str) -> str:
         data = self._drive.files().export(fileId=doc_id, mimeType="text/markdown").execute()
         return data.decode("utf-8") if isinstance(data, bytes) else data
 
-    def get_document(self, doc_id):
-        return self._docs.documents().get(documentId=doc_id).execute()
+    def get_document(self, doc_id: str) -> dict[str, Any]:
+        return cast(dict[str, Any], self._docs.documents().get(documentId=doc_id).execute())
 
-    def list_tabs(self, doc_id):
+    def list_tabs(self, doc_id: str) -> list[dict[str, Any]]:
         """Return [{id, title, index}] for each user-created tab, or [] for untabbed docs.
 
         Docs without user-created tabs have one implicit tab; we treat those as untabbed
@@ -85,17 +86,18 @@ class GDocsApi:
             for t in raw
         ]
 
-    def get_body_content(self, doc_id, tab_id=None):
+    def get_body_content(self, doc_id: str, tab_id: str | None = None) -> list[dict[str, Any]]:
         """Return body content list for the doc (or a specific tab)."""
         if tab_id:
             doc = self._docs.documents().get(documentId=doc_id, includeTabsContent=True).execute()
             for t in doc.get("tabs", []):
                 if t["tabProperties"]["tabId"] == tab_id:
-                    return t["documentTab"]["body"]["content"]
+                    return cast(list[dict[str, Any]], t["documentTab"]["body"]["content"])
             raise SystemExit(f"Tab {tab_id!r} not found in {doc_id!r}")
-        return self._docs.documents().get(documentId=doc_id).execute()["body"]["content"]
+        content = self._docs.documents().get(documentId=doc_id).execute()["body"]["content"]
+        return cast(list[dict[str, Any]], content)
 
-    def export_tab_markdown(self, doc_id, tab_id):
+    def export_tab_markdown(self, doc_id: str, tab_id: str) -> str:
         """Export markdown for one tab by splitting the full Drive export."""
         tabs = self.list_tabs(doc_id)
         full_md = self.export_markdown(doc_id)
@@ -104,7 +106,7 @@ class GDocsApi:
         split = _split_by_tabs(full_md, tabs)
         return split.get(tab_id, full_md)
 
-    def batch_update(self, doc_id, requests):
+    def batch_update(self, doc_id: str, requests: list[dict[str, Any]]) -> None:
         for attempt in range(5):
             try:
                 self._docs.documents().batchUpdate(
@@ -117,7 +119,7 @@ class GDocsApi:
                 else:
                     raise
 
-    def list_comments(self, doc_id):
+    def list_comments(self, doc_id: str) -> list[dict[str, Any]]:
         items, token = [], None
         while True:
             resp = (
@@ -138,24 +140,25 @@ class GDocsApi:
 
     # --- e2e helpers ---
 
-    def create_comment(self, doc_id, content, quoted=None):
-        body = {"content": content}
+    def create_comment(self, doc_id: str, content: str, quoted: str | None = None) -> dict[str, Any]:
+        body: dict[str, Any] = {"content": content}
         if quoted:
             body["quotedFileContent"] = {"value": quoted}
-        return self._drive.comments().create(fileId=doc_id, body=body, fields="*").execute()
+        created = self._drive.comments().create(fileId=doc_id, body=body, fields="*").execute()
+        return cast(dict[str, Any], created)
 
-    def delete_file(self, doc_id):
+    def delete_file(self, doc_id: str) -> None:
         self._drive.files().delete(fileId=doc_id).execute()
 
-    def find_or_create_folder(self, name):
+    def find_or_create_folder(self, name: str) -> str:
         escaped = name.replace("'", "\\'")
         q = f"name = '{escaped}' and mimeType = '{_FOLDER_MIME}' and trashed = false"
         found = self._drive.files().list(q=q, fields="files(id)").execute()["files"]
         if found:
-            return found[0]["id"]
+            return cast(str, found[0]["id"])
         f = (
             self._drive.files()
             .create(body={"name": name, "mimeType": _FOLDER_MIME}, fields="id")
             .execute()
         )
-        return f["id"]
+        return cast(str, f["id"])

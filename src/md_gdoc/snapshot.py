@@ -7,34 +7,36 @@ Two files are maintained:
 
 from pathlib import Path
 
+StrPath = str | Path
 
-def path_for(md_path):
+
+def path_for(md_path: StrPath) -> Path:
     md_path = Path(md_path)
     return md_path.parent / ".sync" / (md_path.name + ".base")
 
 
-def remote_path_for(md_path):
+def remote_path_for(md_path: StrPath) -> Path:
     md_path = Path(md_path)
     return md_path.parent / ".sync" / (md_path.name + ".base.remote")
 
 
-def load(md_path):
+def load(md_path: StrPath) -> str | None:
     p = path_for(md_path)
     return p.read_text(encoding="utf-8") if p.exists() else None
 
 
-def load_remote(md_path):
+def load_remote(md_path: StrPath) -> str | None:
     p = remote_path_for(md_path)
     return p.read_text(encoding="utf-8") if p.exists() else None
 
 
-def save(md_path, body):
+def save(md_path: StrPath, body: str) -> None:
     p = path_for(md_path)
     p.parent.mkdir(exist_ok=True)
     p.write_text(body, encoding="utf-8")
 
 
-def save_remote(md_path, body):
+def save_remote(md_path: StrPath, body: str) -> None:
     p = remote_path_for(md_path)
     p.parent.mkdir(exist_ok=True)
     p.write_text(body, encoding="utf-8")

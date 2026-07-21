@@ -1,13 +1,15 @@
 """Push: first-push block insertion, anchor-preserving revision diff, --replace."""
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from . import binding, snapshot
-from .diffing import diff_blocks
+from .api import GDocsApi
+from .diffing import BlockOp, diff_blocks
 from .docmodel import AlignmentError, check_alignment, doc_blocks
-from .mdblocks import parse_blocks, unsupported
+from .mdblocks import Block, parse_blocks, unsupported
 from .requests_builder import run_requests, segment_blocks
 from .unescape import clean
 
@@ -19,7 +21,14 @@ class PushResult:
     orphaned: list[Any] = field(default_factory=list)
 
 
-def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
+def push(
+    md_path: str | Path,
+    api: GDocsApi,
+    replace: bool = False,
+    force: bool = False,
+    yes: bool = False,
+    confirm: Callable[[str], str] = input,
+) -> PushResult:
     md_path = Path(md_path)
     text = md_path.read_text(encoding="utf-8")
     doc_id, url, body = binding.read(text)
@@ -119,7 +128,7 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
             # includes the doc's terminating newline. If the live API returns 400, clamp
             # end to end-1 and insert with a leading "\n" instead.
             insert_at = start
-            rng = {"startIndex": start, "endIndex": end}
+            rng: dict[str, Any] = {"startIndex": start, "endIndex": end}
             if tab_id:
                 rng["tabId"] = tab_id
             requests.append({"deleteContentRange": {"range": rng}})
@@ -147,7 +156,7 @@ def push(md_path, api, replace=False, force=False, yes=False, confirm=input):
     return PushResult("pushed", url or "", orphaned)
 
 
-def _insert_blocks(doc_id, blocks, api, tab_id=None):
+def _insert_blocks(doc_id: str, blocks: list[Block], api: GDocsApi, tab_id: str | None = None) -> None:
     r"""Populate a blank doc with blocks, one run per batchUpdate.
 
     Consecutive list items form one run so their nesting survives.
@@ -163,7 +172,7 @@ def _insert_blocks(doc_id, blocks, api, tab_id=None):
         api.batch_update(doc_id, run_requests(run, index, tab_id))
 
 
-def _clear_doc(doc_id, api, tab_id=None):
+def _clear_doc(doc_id: str, api: GDocsApi, tab_id: str | None = None) -> None:
     """Delete all body content, leaving the doc's final empty paragraph."""
     content = api.get_body_content(doc_id, tab_id)
     end = content[-1]["endIndex"]
@@ -174,22 +183,24 @@ def _clear_doc(doc_id, api, tab_id=None):
         api.batch_update(doc_id, [{"deleteContentRange": {"range": rng}}])
 
 
-def _trailing_para_index(content):
+def _trailing_para_index(content: list[dict[str, Any]]) -> int:
     """Return the startIndex of the last non-table, non-sectionBreak element."""
     for el in reversed(content):
         if "sectionBreak" not in el and "table" not in el:
-            return el["startIndex"]
+            return cast(int, el["startIndex"])
     return 1
 
 
-def _orphaned_comments(comment_items, ops, base_blocks):
+def _orphaned_comments(
+    comment_items: list[dict[str, Any]], ops: list[BlockOp], base_blocks: list[Block]
+) -> list[str]:
     changed_text = "\n\n".join(
         b.source
         for o in ops
         if o.op in ("replace", "delete")
         for b in base_blocks[o.old[0] : o.old[1]]
     )
-    out = []
+    out: list[str] = []
     for it in comment_items:
         if it.get("resolved") or it.get("deleted"):
             continue

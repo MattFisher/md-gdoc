@@ -6,12 +6,13 @@ from pathlib import Path
 import mdformat
 
 from . import binding, snapshot
+from .api import GDocsApi
 from .comments import from_api, render
 from .images import extract_images
 from .unescape import clean
 
 
-def _fmt(md):
+def _fmt(md: str) -> str:
     """Normalize pulled markdown to a stable local dialect.
 
     Google's export dialect (`*` bullets, trailing hard-break spaces,
@@ -28,7 +29,7 @@ class PullResult:
     remote_path: Path | None = None
 
 
-def pull(md_path, api):
+def pull(md_path: str | Path, api: GDocsApi) -> PullResult:
     md_path = Path(md_path)
     text = md_path.read_text(encoding="utf-8")
     doc_id, _, local_body = binding.read(text)

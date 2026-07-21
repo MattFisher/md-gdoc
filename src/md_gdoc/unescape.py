@@ -10,7 +10,7 @@ _SPAN_LINE = re.compile(r"^(\s*)(`+.*`+)\s*$")
 _md = MarkdownIt("commonmark")
 
 
-def _span_content(line):
+def _span_content(line: str) -> tuple[str, str] | None:
     """Return (indent, content) if line is exactly one inline code span."""
     m = _SPAN_LINE.match(line)
     if not m:
@@ -21,7 +21,7 @@ def _span_content(line):
     return None
 
 
-def _extract_code_regions(md):
+def _extract_code_regions(md: str) -> tuple[str, list[str]]:
     """Decode span-encoded code blocks into placeholders; return (md, stash).
 
     Code-block paragraphs are stored in a code font, so Google's export wraps
@@ -56,13 +56,13 @@ def _extract_code_regions(md):
     return "\n".join(out), stash
 
 
-def _restore_code_regions(md, stash):
+def _restore_code_regions(md: str, stash: list[str]) -> str:
     for i, block in enumerate(stash):
         md = md.replace(f"\x00{i}\x00", block)
     return md
 
 
-def _clean_code_blocks(md):
+def _clean_code_blocks(md: str) -> str:
     r"""Strip trailing whitespace within legacy escaped-fence code blocks.
 
     Docs pushed before the code-font change exported code blocks as escaped
@@ -88,7 +88,7 @@ def _clean_code_blocks(md):
     return "\n".join(result)
 
 
-def clean(md):
+def clean(md: str) -> str:
     md = md.replace("\r\n", "\n")
     md, stash = _extract_code_regions(md)
     md = _ESCAPED.sub(r"\1", md)

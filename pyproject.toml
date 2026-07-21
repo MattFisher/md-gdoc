@@ -104,14 +104,6 @@ python_version = "3.10"
 strict = true
 ignore_missing_imports = true # third-party libs are often untyped
 
-# md-gdoc predates this standard and was never annotated: requiring annotations
-# outright produces 219 errors, of which ~195 are just "this function has no
-# hints" plus the untyped-call cascade from them. Everything else in `strict`
-# is on and passing. These three come off once the ~69 functions are annotated
-# (tracked separately) — do not treat them as a permanent exemption.
-disallow_untyped_defs = false
-disallow_untyped_calls = false
-disallow_incomplete_defs = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
