@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import argparse
+from typing import TYPE_CHECKING
 
 from . import __version__
+
+if TYPE_CHECKING:
+    from .api import GDocsApi
 
 
 def main(argv: list[str] | None = None) -> int | None:
@@ -74,48 +78,48 @@ def _run(args: argparse.Namespace, api: GDocsApi) -> int | None:
     if args.command == "push":
         from .push import push
 
-        res = push(args.file, api, replace=args.replace, force=args.force, yes=args.yes)
-        if res.state == "created":
-            print(f"Created doc: {res.url}")
-        elif res.state == "noop":
+        push_res = push(args.file, api, replace=args.replace, force=args.force, yes=args.yes)
+        if push_res.state == "created":
+            print(f"Created doc: {push_res.url}")
+        elif push_res.state == "noop":
             print("No changes to push.")
         else:
-            print(f"{res.state.capitalize()}: {res.url}")
-            if res.orphaned:
-                print(f"Orphaned {len(res.orphaned)} comment anchor(s).")
+            print(f"{push_res.state.capitalize()}: {push_res.url}")
+            if push_res.orphaned:
+                print(f"Orphaned {len(push_res.orphaned)} comment anchor(s).")
     elif args.command == "clone":
         from .clone import clone
 
-        res = clone(args.url, args.file, api)
-        if isinstance(res, list):
-            for r in res:
+        clone_res = clone(args.url, args.file, api)
+        if isinstance(clone_res, list):
+            for r in clone_res:
                 print(f"Cloned to {r.path}")
-            first = res[0]
+            first = clone_res[0]
             from . import binding as _binding
 
             cf = _binding.comments_file(first.path.read_text(encoding="utf-8"))
             comments_path = (first.path.parent / cf) if cf else (str(first.path) + ".comments.md")
             print(f"{first.comment_count} comment(s) saved to {comments_path}")
         else:
-            print(f"Cloned to {res.path}")
-            print(f"{res.comment_count} comment(s) saved to {res.path}.comments.md")
+            print(f"Cloned to {clone_res.path}")
+            print(f"{clone_res.comment_count} comment(s) saved to {clone_res.path}.comments.md")
     elif args.command == "pull":
         from .pull import pull
 
-        res = pull(args.file, api)
-        print(f"{res.comment_count} comment(s) pulled.")
-        if res.state == "clean":
+        pull_res = pull(args.file, api)
+        print(f"{pull_res.comment_count} comment(s) pulled.")
+        if pull_res.state == "clean":
             print("No remote edits.")
-        elif res.state == "updated":
+        elif pull_res.state == "updated":
             print("Remote edits applied to local file.")
         else:
-            print(f"Both sides changed — remote copy written to {res.remote_path}.")
+            print(f"Both sides changed — remote copy written to {pull_res.remote_path}.")
             print("Merge manually (or with your agent), then push.")
     elif args.command == "status":
         from .status import status
 
-        res = status(args.file, api)
-        print(res.url)
-        print(f"Remote changes: {'yes' if res.remote_changed else 'no'}")
-        print(f"Open comments: {res.open_comments}")
+        status_res = status(args.file, api)
+        print(status_res.url)
+        print(f"Remote changes: {'yes' if status_res.remote_changed else 'no'}")
+        print(f"Open comments: {status_res.open_comments}")
     return 0
