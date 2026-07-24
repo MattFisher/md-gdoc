@@ -26,7 +26,7 @@ jobs:
         include:
           - os: macos-latest
             python: "3.13"
-    uses: MattFisher/python-project-template/.github/workflows/python-ci.yml@v1
+    uses: MattFisher/python-project-template/.github/workflows/python-ci.yml@v1.5.0
     with:
       python-version: ${{ matrix.python }}
       runs-on: ${{ matrix.os }}
