@@ -34,11 +34,32 @@ repos:
     rev: 745eface02aef23e168a8afb6b5737818efbea95 # v0.11.0.1
     hooks:
       - id: shellcheck # lints shell scripts (e.g. .claude/hooks/session-start.sh)
+        # Pinned independently of default_language_version above, and it must
+        # stay below 3.13 when that default moves up. shellcheck-py ships no
+        # wheel in its git repo, so pre-commit builds it from source, and that
+        # build downloads the binary with a bare urllib.request.urlopen. Python
+        # 3.13 turns on ssl.VERIFY_X509_STRICT by default, which rejects a CA
+        # certificate carrying no keyUsage extension -- as the MITM proxies in
+        # front of some sandboxes do. The hook environment then can't be built at
+        # all, so `git commit` fails there, not merely `pre-commit run`. SKIP= is
+        # no help: it applies to `pre-commit run`, not to installation.
+        #
+        # The interpreter builds this hook's environment and nothing else, so it
+        # has no bearing on what shellcheck checks. The durable fix is a local
+        # hook using the prebuilt wheel from PyPI -- no build, no download -- at
+        # the cost of `pre-commit autoupdate` no longer tracking it.
+        language_version: python3.12
 
   - repo: https://github.com/crate-ci/typos
     rev: bee27e3a4fd1ea2111cf90ab89cd076c870fce14 # v1.48.0
     hooks:
+      # Report only. The hook's own default args are
+      # [--write-changes, --force-exclude], which rewrite source rather than
+      # reporting it: anything the checker mistakes for a misspelling gets
+      # renamed silently, including identifiers and domain vocabulary. A
+      # correction needs a human to approve it, so --write-changes is dropped.
       - id: typos # spell-check code, comments, and docs
+        args: [--force-exclude]
 
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     rev: 64a97fb7fa63188393d3215c6e312f5f9c6d0f78 # v1.27.0

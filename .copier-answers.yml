@@ -1,10 +1,11 @@
 # This file is auto-generated and updated by Copier; do not edit by hand.
 # Run `copier update` to pull in template changes.
-_commit: v1.5.0
+_commit: v1.7.0
 _src_path: gh:MattFisher/python-project-template
 author_email: m@ttfisher.com
 author_name: Matt Fisher
 github_owner: MattFisher
+license: MIT
 project_description: 'Sync local markdown files with Google Docs: push drafts, pull
     comments and edits, preserve comment anchors.'
 project_kind: library
@@ -12,3 +13,6 @@ project_name: md-gdoc
 publish_to_pypi: true
 python_version: '3.10'
 use_coverage_gate: false
+use_frontend: false
+use_template_update: true
+use_typos: true
