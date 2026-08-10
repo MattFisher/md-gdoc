@@ -1,6 +1,6 @@
 # This file is auto-generated and updated by Copier; do not edit by hand.
 # Run `copier update` to pull in template changes.
-_commit: v1.7.0
+_commit: v1.8.1
 _src_path: gh:MattFisher/python-project-template
 author_email: m@ttfisher.com
 author_name: Matt Fisher

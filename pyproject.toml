@@ -47,8 +47,12 @@ md-gdoc = "md_gdoc.cli:main"
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=7.0.0",
+<<<<<<< before updating
     "python-dotenv>=1.0",
     "mypy>=1.10",
+=======
+    "basedpyright>=1.39",
+>>>>>>> after updating
     "pre-commit>=4.0.0",
 ]
 
@@ -99,10 +103,12 @@ convention = "google"
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D"] # tests don't need docstring linting
 
-[tool.mypy]
-python_version = "3.10"
-strict = true
-ignore_missing_imports = true # third-party libs are often untyped
+[tool.basedpyright]
+pythonVersion = "3.10"
+# "strict" (pyright's), not basedpyright's stricter default "recommended" —
+# the based-only rules (reportAny etc.) are opt-in per project.
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false # third-party libs are often untyped
 
 
 [tool.pytest.ini_options]

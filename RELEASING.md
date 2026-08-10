@@ -35,10 +35,16 @@ The first tagged release creates the PyPI project and converts the pending publi
 ## Sanity checks before tagging
 
 ```bash
+<<<<<<< before updating
 uv run pytest                        # unit tests
 uv run mypy src                      # type check
 uv run pre-commit run --all-files    # lint (ruff, zizmor, mdformat, ...)
 uv build                             # sdist + wheel into dist/
 uvx twine check dist/*               # metadata renders on PyPI
 RUN_MD_GDOC_E2E=1 uv run pytest tests/e2e -q   # live API round-trip (optional but recommended)
+=======
+uv run pytest
+uv run basedpyright src
+uv build && uvx twine check dist/*
+>>>>>>> after updating
 ```

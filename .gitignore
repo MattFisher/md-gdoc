@@ -14,8 +14,6 @@ dist/
 *.egg
 
 # Tool caches
-.mypy_cache/
-.dmypy.json
 .pytest_cache/
 .ruff_cache/
 

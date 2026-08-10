@@ -113,6 +113,7 @@ Add to the `.gitignore` of repos where you use md-gdoc:
 ## Development
 
 ```bash
+<<<<<<< before updating
 uv sync                     # install with dev dependencies
 uv run pytest               # unit tests (no network, fake API)
 uv run ruff check .         # lint
@@ -127,6 +128,15 @@ RUN_MD_GDOC_E2E=1 uv run pytest tests/e2e -q
 It creates and deletes real docs in a Drive folder named `md-gdoc-e2e` (override with `MD_GDOC_E2E_FOLDER`). Regenerate the golden export with `RUN_MD_GDOC_E2E=1 python -m tests.e2e.test_end_to_end --generate`.
 
 Design history: [design spec](docs/superpowers/specs/2026-07-02-gdoc-sync-design.md) and [implementation plan](docs/superpowers/plans/2026-07-02-gdoc-sync.md) (written under the tool's original name, gdoc-sync).
+=======
+uv sync
+uv run pre-commit install   # optional: run the lint stack on every commit
+uv run pytest
+uv run basedpyright src
+```
+
+Linting (ruff, [zizmor](https://docs.zizmor.sh/), mdformat) runs via [pre-commit](https://pre-commit.com); CI runs the same stack plus basedpyright and pytest via the shared [`python-ci`](https://github.com/MattFisher/python-project-template) reusable workflow.
+>>>>>>> after updating
 
 ## License
 

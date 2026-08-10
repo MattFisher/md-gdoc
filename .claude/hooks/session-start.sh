@@ -7,7 +7,7 @@ fi
 
 cd "$CLAUDE_PROJECT_DIR"
 
-# Install the project + dev tooling (pytest, mypy, pre-commit) into the uv-managed venv.
+# Install the project + dev tooling (pytest, basedpyright, pre-commit) into the uv-managed venv.
 uv sync
 
 # Installs the git hook (so `git commit` runs it automatically) and
